@@ -1,0 +1,217 @@
+{
+  "resources": {
+    "crm.customer": {
+      "entity_type": "Customer",
+      "fields": {
+        "id": {},
+        "name": {"labels": ["pii"]},
+        "email": {"labels": ["pii"]},
+        "phone": {"labels": ["pii"]},
+        "region": {},
+        "tier": {},
+        "notes": {"labels": ["internal"]},
+        "addresses": {"labels": ["pii"]},
+        "addresses[].geo": {"labels": ["internal"]},
+        "card.last4": {"labels": ["financial"]},
+        "card.number": {"labels": ["financial", "secret", "card"], "mask": "redact"}
+      }
+    },
+    "crm.ticket": {
+      "entity_type": "Ticket",
+      "fields": {
+        "id": {},
+        "customer_id": {},
+        "region": {},
+        "subject": {},
+        "body": {"labels": ["pii"]},
+        "status": {},
+        "priority": {},
+        "internal_notes": {"labels": ["internal"]}
+      }
+    },
+    "billing.refund": {
+      "entity_type": "Refund",
+      "fields": {
+        "id": {},
+        "order_id": {},
+        "customer_id": {},
+        "region": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "reason": {},
+        "status": {},
+        "requested_by": {},
+        "internal_note": {"labels": ["internal"]}
+      }
+    },
+    "billing.invoice": {
+      "entity_type": "Invoice",
+      "fields": {
+        "id": {},
+        "vendor_id": {},
+        "po_id": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "status": {},
+        "lines": {},
+        "lines[].amount": {"labels": ["financial"]},
+        "remit_to.name": {},
+        "remit_to.iban": {"labels": ["financial", "secret", "bank"], "mask": "redact"}
+      }
+    },
+    "finance.payment": {
+      "entity_type": "Payment",
+      "fields": {
+        "id": {},
+        "kind": {},
+        "ref": {},
+        "vendor_id": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "status": {},
+        "requested_by": {},
+        "approved_by": {},
+        "paid_by": {},
+        "beneficiary.name": {},
+        "beneficiary.iban": {"labels": ["financial", "secret", "bank"], "mask": "redact"}
+      }
+    },
+    "finance.ledger": {
+      "entity_type": "LedgerEntry",
+      "fields": {
+        "id": {},
+        "period": {},
+        "account": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "memo": {"labels": ["internal"]},
+        "posted_by": {},
+        "approved_by": {},
+        "status": {}
+      }
+    },
+    "hr.employee": {
+      "entity_type": "Employee",
+      "fields": {
+        "id": {},
+        "name": {"labels": ["pii"]},
+        "email": {"labels": ["pii"]},
+        "unit": {},
+        "region": {},
+        "manager": {},
+        "job_title": {},
+        "start_date": {},
+        "status": {},
+        "national_id": {"labels": ["pii", "secret"], "mask": "redact"},
+        "home_address": {"labels": ["pii"]},
+        "bank_account": {"labels": ["financial", "secret", "bank"], "mask": "redact"},
+        "emergency_contact": {"labels": ["pii", "hr-confidential"]}
+      }
+    },
+    "hr.salary": {
+      "entity_type": "Salary",
+      "fields": {
+        "employee_id": {},
+        "currency": {},
+        "grade": {},
+        "base": {"labels": ["financial", "salary"]},
+        "bonus": {"labels": ["financial", "salary"]},
+        "notes": {"labels": ["hr-confidential"]}
+      }
+    },
+    "hr.review": {
+      "entity_type": "Review",
+      "fields": {
+        "employee_id": {},
+        "period": {},
+        "reviewer": {},
+        "goals": {},
+        "rating": {"labels": ["hr-confidential"]},
+        "notes": {"labels": ["hr-confidential"]}
+      }
+    },
+    "sales.opportunity": {
+      "entity_type": "Opportunity",
+      "fields": {
+        "id": {},
+        "customer_id": {},
+        "region": {},
+        "owner": {},
+        "stage": {},
+        "amount": {"labels": ["financial", "pricing"]},
+        "discount_pct": {"labels": ["pricing"]},
+        "notes": {"labels": ["internal"]}
+      }
+    },
+    "sales.contract": {
+      "entity_type": "Contract",
+      "fields": {
+        "id": {},
+        "customer_id": {},
+        "region": {},
+        "status": {},
+        "term_months": {},
+        "clauses": {},
+        "signatory": {"labels": ["pii"]},
+        "pricing.list_price": {"labels": ["financial", "pricing"]},
+        "pricing.discount_pct": {"labels": ["pricing"]},
+        "pricing.margin_pct": {"labels": ["pricing", "secret"]}
+      }
+    },
+    "procurement.po": {
+      "entity_type": "PurchaseOrder",
+      "fields": {
+        "id": {},
+        "vendor_id": {},
+        "cost_center": {},
+        "requested_by": {},
+        "approved_by": {},
+        "status": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "items": {},
+        "items[].unit_price": {"labels": ["financial"]}
+      }
+    },
+    "procurement.vendor": {
+      "entity_type": "Vendor",
+      "fields": {
+        "id": {},
+        "name": {},
+        "region": {},
+        "status": {},
+        "onboarded_by": {},
+        "contact_email": {"labels": ["pii"]},
+        "tax_id": {"labels": ["secret"]},
+        "risk_score": {"labels": ["internal"]},
+        "bank.bic": {"labels": ["bank"]},
+        "bank.iban": {"labels": ["financial", "secret", "bank"], "mask": "redact"}
+      }
+    },
+    "it.account": {
+      "entity_type": "Account",
+      "fields": {
+        "id": {},
+        "employee_id": {},
+        "username": {},
+        "status": {},
+        "groups": {},
+        "last_login": {"labels": ["internal"]},
+        "mfa_secret": {"labels": ["secret"], "mask": "redact"}
+      }
+    },
+    "it.access_request": {
+      "entity_type": "AccessRequest",
+      "fields": {
+        "id": {},
+        "employee_id": {},
+        "system": {},
+        "level": {},
+        "requested_by": {},
+        "approved_by": {},
+        "justification": {},
+        "status": {}
+      }
+    }
+  }
+}

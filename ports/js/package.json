@@ -1,0 +1,11 @@
+{
+  "name": "sf-smartdelegate-client",
+  "version": "0.3.0",
+  "description": "SmartDelegate client for JavaScript/TypeScript: thin REST client for the decision daemon plus tool middleware",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.ts",
+  "engines": {"node": ">=18"},
+  "scripts": {"test": "node --test test/*.test.mjs"}
+}

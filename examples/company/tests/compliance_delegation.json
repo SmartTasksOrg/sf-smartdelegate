@@ -1,0 +1,1131 @@
+{
+ "about": "The auditor role, and who may start which agent. The delegation cases issue real tokens, so they also exercise the role ceilings.",
+ "cases": [
+  {
+   "name": "the auditor reads every unit's records",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.ticket",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "billing.refund",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "billing.invoice",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "finance.payment",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.employee",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.review",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.po",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "it.account",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "it.access_request",
+       "id": "x-1"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "auditor-reads-every-resource"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "the auditor changes nothing",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "auditor-role-is-read-only"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-1",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1",
+       "attrs": {
+        "requested_by": "uma"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the auditor sees amounts but no card number, bank account, tax id, salary or review note",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "card.number"
+      ]
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "id": "v-1",
+       "name": "Acme Tooling",
+       "region": "EU",
+       "status": "active",
+       "contact_email": "ap@acme.example",
+       "tax_id": "DE123",
+       "risk_score": 2,
+       "bank": {
+        "iban": "DE89370400440532013000",
+        "bic": "COBADEFF"
+       },
+       "onboarded_by": "uma"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "bank.bic",
+       "bank.iban",
+       "tax_id"
+      ]
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "emp-1"
+      },
+      "data": {
+       "employee_id": "emp-1",
+       "grade": "L3",
+       "base": 1,
+       "bonus": 2,
+       "notes": "n"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "base",
+       "bonus",
+       "notes"
+      ],
+      "data": {
+       "employee_id": "emp-1",
+       "grade": "L3"
+      }
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator"
+       ],
+       "role": "auditor",
+       "task": "audit-2026q3"
+      },
+      "action": "read",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-1"
+      },
+      "data": {
+       "id": "pay-1",
+       "amount": 100000,
+       "beneficiary": {
+        "name": "Acme",
+        "iban": "DE89"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "beneficiary.iban"
+      ],
+      "data": {
+       "id": "pay-1",
+       "amount": 100000,
+       "beneficiary": {
+        "name": "Acme",
+        "iban": "[REDACTED]"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "the audit sampler (a sub-agent) loses internal notes as well",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "carla",
+       "agents": [
+        "compliance-orchestrator",
+        "audit-sampler"
+       ],
+       "role": "auditor",
+       "task": "audit-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "addresses[].geo",
+       "card.number",
+       "notes"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a human starts their own unit's orchestrator in a role they hold",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-agent",
+      "task": "ticket-1"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "gina",
+      "agent": "finance-orchestrator",
+      "role": "ap-clerk",
+      "task": "pay-1"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carla",
+      "agent": "compliance-orchestrator",
+      "role": "auditor",
+      "task": "audit-1"
+     },
+     "expect": {
+      "ok": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "a role the human does not hold is refused",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-supervisor",
+      "task": "ticket-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "gina",
+      "agent": "finance-orchestrator",
+      "role": "ap-manager",
+      "task": "pay-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "compliance-orchestrator",
+      "role": "auditor",
+      "task": "audit-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "aiko",
+      "agent": "incident-responder",
+      "role": "break-glass",
+      "task": "incident-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a role is lent to its own agent, for its own kind of task, within its budget",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "finance-orchestrator",
+      "role": "support-agent",
+      "task": "ticket-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-agent",
+      "task": "audit-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-agent",
+      "task": "ticket-1",
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20001
+       }
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "without a role nothing is delegated",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "an unknown agent, and a registered agent no rule mentions",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "rogue-bot",
+      "role": "support-agent",
+      "task": "ticket-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carla",
+      "agent": "rogue-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_agent"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carla",
+      "agent": "unassigned-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "any employee raises a requisition; any manager approves access requests; nobody else's orchestrator",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "procurement-orchestrator",
+      "role": "requisitioner",
+      "task": "req-1"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "sofia",
+      "agent": "it-orchestrator",
+      "role": "access-approver",
+      "task": "access-1"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "petra",
+      "agent": "it-orchestrator",
+      "role": "access-approver",
+      "task": "access-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "an orchestrator hands work to its own specialists, never across units, never to an unknown agent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "petra",
+      "agent": "sales-orchestrator",
+      "role": "sales-rep",
+      "task": "contract-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "contract-summarizer"
+     },
+     "save": {
+      "t2": "token"
+     },
+     "expect": {
+      "ok": true,
+      "chain": [
+       "sales-orchestrator",
+       "contract-summarizer"
+      ],
+      "role": "sales-rep"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t2",
+      "actor": "clause-extractor"
+     },
+     "expect": {
+      "ok": true,
+      "chain": [
+       "sales-orchestrator",
+       "contract-summarizer",
+       "clause-extractor"
+      ]
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "finance-orchestrator"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "rogue-bot"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_agent"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t2",
+      "actor": "quote-builder"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "contract-summarizer",
+      "cap": {
+       "actions": [
+        "read",
+        "delete"
+       ],
+       "resources": [
+        "sales.contract/*"
+       ],
+       "deny_labels": [
+        "secret",
+        "card",
+        "bank",
+        "salary",
+        "hr-confidential"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "break-glass authority is never passed to a sub-agent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bruno",
+      "agent": "incident-responder",
+      "role": "break-glass",
+      "task": "incident-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true,
+      "expires_in": 300
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "access-reviewer"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

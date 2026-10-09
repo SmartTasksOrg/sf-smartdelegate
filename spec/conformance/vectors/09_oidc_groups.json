@@ -1,0 +1,281 @@
+{
+ "suite": "09_oidc_groups",
+ "about": "With idp.groups_claim set, the identity provider is the authority on what the human is a member of right now. Regenerate with spec/tools/make_oidc_fixtures.py.",
+ "config": {
+  "idp": {
+   "issuer": "https://idp.example.test",
+   "audience": "smartdelegate-demo",
+   "jwks": {
+    "keys": [
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "test-1",
+      "n": "qzeWUVC8mcJ3fR5TQZXDc1olgxByLXfTnmHs47O_e5YROHYaj1C2wKkaBvFsWnlAHLZn5XbGQ3UwkkJHEld9gFku9yd-TyW2bZVOlY-oeDT3GHgiu7zDI2RotAt4GvzFuVnS4T1xUrN25rdZOB58JIPKVXuUUFE9ASzyS7Y-R_uF_38UfPUGK9rkdrm5pDVRJAbcg1SgZFOb6_WK8pZtS3zX077Ivrxmi-fHKhZx3K6pickNqesbn6pkPyQ_5lGy6PUgSgYXfxj3R4Sg4o0ASk7PHkDgxcOLjMQgTjAC9ZwXKgDsBBVb6z-tVUwWz4VEbPzix8r5TkZ-jszUomBZew",
+      "e": "AQAB"
+     }
+    ]
+   },
+   "groups_claim": "groups",
+   "group_map": {
+    "sg-support": "support",
+    "sg-supervisors": "supervisors",
+    "sg-compliance": "compliance",
+    "sg-ghost": "no-such-group"
+   }
+  }
+ },
+ "cases": [
+  {
+   "name": "the provider's groups decide which roles the human can lend",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogWyJzZy1zdXBwb3J0Il19.B4gM8qR3BrYk9zU7w4WJdrwoMue_dwg8wWMapPh32pYTRJmAQstNOG4sX5sOSs0eutPQJV46vesKMKXk9LV_fD8l-nHxDl4vzuPLkLyJTEWNbxs5dH541kChaJdn27nERjZGy8KL_VbLtnJ4KwBAz5UOyziPAeYX0W7ozAd0mpo2ObWwTHx2QrvvdSo1TvjEyxufIILyHbkDyiipedBqeRnlqXPapzNqroB0CrsoV1hHxqFxqKSqZe2py7I3PFoecZjWEL_YJdXGCJMrAxOMMuerrwWPp6Sih5QM8l7rDFhGtOvAt3HMs2mSiGJNLpLusFwqGXSA9OSz0303wN4NHQ",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent"
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogWyJzZy1zdXBwb3J0Il19.B4gM8qR3BrYk9zU7w4WJdrwoMue_dwg8wWMapPh32pYTRJmAQstNOG4sX5sOSs0eutPQJV46vesKMKXk9LV_fD8l-nHxDl4vzuPLkLyJTEWNbxs5dH541kChaJdn27nERjZGy8KL_VbLtnJ4KwBAz5UOyziPAeYX0W7ozAd0mpo2ObWwTHx2QrvvdSo1TvjEyxufIILyHbkDyiipedBqeRnlqXPapzNqroB0CrsoV1hHxqFxqKSqZe2py7I3PFoecZjWEL_YJdXGCJMrAxOMMuerrwWPp6Sih5QM8l7rDFhGtOvAt3HMs2mSiGJNLpLusFwqGXSA9OSz0303wN4NHQ",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "supervisor",
+      "task": "escalation-1"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a human removed from a group at the provider loses the role at once",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogW119.e26GW1BvBo43l3jpN8bPphB6qW0DTZagFI0y3B_udFLqUORBv5u8BjCgSN9dcQBh9y9AtrASzjCkYgWCoZxTkzcpGtOZHm5lz7DKhaLhK844wUSiNlFg7BNG1wUSKcLE1Y0SyeWXA8D147Ws7el1IwsSmyn11tALSSfsg0iFHpbwMCZs5nVmNc6yGXo5FKdvu1HVjxy7bv7vLEDOZmaZzOsAh6wtTbe3dk-nrOF9Cahvgu429FEV346qirZ8qPRrKbFhGvsjaXm7P-sjKoqbjKkGMXmV6IwI8ZBHHz8uSJvV_9qrcEvwCuPELGJF_bZhLMKlQiarT6UnFzW6d8UHoA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogW119.e26GW1BvBo43l3jpN8bPphB6qW0DTZagFI0y3B_udFLqUORBv5u8BjCgSN9dcQBh9y9AtrASzjCkYgWCoZxTkzcpGtOZHm5lz7DKhaLhK844wUSiNlFg7BNG1wUSKcLE1Y0SyeWXA8D147Ws7el1IwsSmyn11tALSSfsg0iFHpbwMCZs5nVmNc6yGXo5FKdvu1HVjxy7bv7vLEDOZmaZzOsAh6wtTbe3dk-nrOF9Cahvgu429FEV346qirZ8qPRrKbFhGvsjaXm7P-sjKoqbjKkGMXmV6IwI8ZBHHz8uSJvV_9qrcEvwCuPELGJF_bZhLMKlQiarT6UnFzW6d8UHoA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a human added at the provider gains the role without a bundle change",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiZGF2ZSIsICJncm91cHMiOiBbInNnLXN1cHBvcnQiXX0.T6wOGyvUBiuAceCbvzzDp8JC7n_dpskjdLmEh0OsyiLpo43jN-lKQ0Io6kRr-s_-4nJp6xaIlC3MLibg7gdkJm0DXaVPRRrhRJ3c1mcy_GCSj1M__i561_x1xHwhd1SBIQGf458wUwrxBGVXgc6VYoTjvnZUZG-STn-09JrQGKQcwMAu0PDy9m8mq-OP47AW52mrFRykTDeOWh800pl2h36Hfd8Cs-XVi1wOM5-hY36VGouaLAYUUMVoOxsFQyXE2HJt00S50HcZ4vuB9S40fGU3_5AP_yx83o8v6kXgh3sWH8yBbeG0qq7cO0T8oSgysSVjnkgUer-51yb-18Pt0Q",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": true,
+      "user": "dave"
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "principal": {
+       "user": "dave",
+       "role": "support-agent"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "provider group names are mapped; unmapped and unknown ones are dropped",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYm9iIiwgImdyb3VwcyI6IFsic2ctc3VwZXJ2aXNvcnMiLCAic2ctdW5tYXBwZWQiLCAic2ctc3VwcG9ydCIsICJzZy1zdXBwb3J0Il19.RQFlZn861o2BspOw7THObyiVv5cIrZLZtUgyUMNi9rp3RZLWM1hbBHpX4KtmJMIW-PZWwkiRNwmAYMVCklkGLGVP9zdsOPYWNohZDdltVBdZnFNDa0fIVdvPGmEsrNUWWGnUvlJoCeSIWcLpLDHBuS-9SXSWz_baGdScFuLxs47l40Xn-JY7rVu8yuJIskwcjG7sF2AsfCJVIdFkUndVgXCtSLW9etyUV0aH7HckifaOtsSuI8Fjm9Tt_dMFjRLiGl-EfVy6lQd6fGsemwF5ADh--U07arruqOOxphD76SjQWAKhWdrROzppTvqCb1Q9zbY0_iaIASTFcgGxWUHHww",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "supervisor",
+      "task": "escalation-1"
+     },
+     "expect": {
+      "ok": true,
+      "role": "supervisor"
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "supervisors"
+        },
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiY2Fyb2wiLCAiZ3JvdXBzIjogInNnLWNvbXBsaWFuY2UifQ.YyR0S39PeJtdVRaofLeGMlB2vDn0y60i7DHPTWB7PFP7RuP6geJcoEcHPlQCh4WLSnw42TKspCaREbgLLQne1xi4MkH1n50YfUuATRoyjHa8D8AF2Bz05dXFPHYYHEbzUSxHoGpFTuVt7vtx4vXv0ldDrCdOyjhcfQSUJlMkcMAGkKqXgBsN-qVX_jsPoZqga_BRvLtJLITyIzx_kPO31-BehAIiUVXPr_iWYKAi1C7lEUOvz26Bz99RYHJJr90QgVFaX6LFB2CDUK5upr1fwJTdeAxHuY3uSfDEGIUTGHH6uAyr186J8wSbYdkqMegR5rP1_ITU5eiBRpB14OuVaQ",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "auditor"
+     },
+     "expect": {
+      "ok": true,
+      "role": "auditor"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogWzEsIDJdfQ.Y0ofpUKFlLNMK0X4OVR405NTbNvf43knTob1vTjS_1dQdunrMQnshJtiO3J0tljUMlYhFEX6DVuoJSEanpw2kdFueGqkRkdu5HJQFLrO11fe1RPAxOxGZpUHIAu7vXyATf4zk9o3TvlO41j6M5JB0FR37xE7qlGtgLxBXuEdunbu4VIgn1NyvzGcsN_UZoiWj6JtJpDmk8CyLCe4JfgnX4HVZp4IhNRSilzNr0HQk8yBuG9Y2DQoGK6c__VqgrwDdk7ij-bOBDUooh-7lJCiXiaQwd2inytMG4_spFK0sWR39MyhKM6_kUvoWIkf4hYiwJVVv4O-CjiDpsG7y9jSdw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "groups passed by the caller are ignored when an ID token is presented",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogW119.e26GW1BvBo43l3jpN8bPphB6qW0DTZagFI0y3B_udFLqUORBv5u8BjCgSN9dcQBh9y9AtrASzjCkYgWCoZxTkzcpGtOZHm5lz7DKhaLhK844wUSiNlFg7BNG1wUSKcLE1Y0SyeWXA8D147Ws7el1IwsSmyn11tALSSfsg0iFHpbwMCZs5nVmNc6yGXo5FKdvu1HVjxy7bv7vLEDOZmaZzOsAh6wtTbe3dk-nrOF9Cahvgu429FEV346qirZ8qPRrKbFhGvsjaXm7P-sjKoqbjKkGMXmV6IwI8ZBHHz8uSJvV_9qrcEvwCuPELGJF_bZhLMKlQiarT6UnFzW6d8UHoA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent",
+      "groups": [
+       "support"
+      ]
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

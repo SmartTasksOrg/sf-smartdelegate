@@ -1,0 +1,653 @@
+{
+ "about": "Support: region, refunds, field views. Tests run without tokens (`chain` states who is acting), so they exercise the policies and the catalog, not the role ceilings.",
+ "cases": [
+  {
+   "name": "a support agent's orchestrator reads a customer of its own region; card number redacted, secret-free",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "support-read-customer"
+      ],
+      "masked": [
+       "card.number"
+      ],
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "notes": "prefers email",
+       "card": {
+        "last4": "4242",
+        "number": "[REDACTED]"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "the refund worker (a sub-agent) does not receive internal notes or geo data",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator",
+        "refund-worker"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "addresses[].geo",
+       "card.number",
+       "notes"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a customer of another region is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-2",
+       "attrs": {
+        "region": "US"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "regional-roles-stay-in-their-region"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a request that does not state the region is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rows of other regions are dropped from a list",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.ticket",
+       "id": "queue",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": [
+       {
+        "id": "t-1",
+        "region": "EU",
+        "subject": "a"
+       },
+       {
+        "id": "t-2",
+        "region": "US",
+        "subject": "b"
+       }
+      ]
+     },
+     "expect": {
+      "effect": "allow",
+      "rows_dropped": 1,
+      "data": [
+       {
+        "id": "t-1",
+        "region": "EU",
+        "subject": "a"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a refund of 50.00 needs nobody else",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-agent",
+      "task": "ticket-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "rf-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "support-refund-small"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a refund of 50.01 waits for a supervisor",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "anna",
+      "agent": "support-orchestrator",
+      "role": "support-agent",
+      "task": "ticket-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "rf-2",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5001
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "refund-over-50"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a refund without an amount is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "rf-3",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "nobody refunds their own customer account",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "rf-4",
+       "attrs": {
+        "region": "EU",
+        "customer_owner": "anna"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 1000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "no-refund-to-your-own-account"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "support may change contact fields only",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "email": "new@example.com"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "tier": "platinum"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "field_denied"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the refund worker cannot update a customer",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator",
+        "refund-worker"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a finance role does not open support's customer records",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a support human with a finance agent gets nothing",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a list of refunds: rows of other regions, and rows that state no region, are dropped whatever region the request states",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "billing.refund",
+       "id": "list",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": [
+       {
+        "id": "rf-1",
+        "region": "EU",
+        "currency": "EUR"
+       },
+       {
+        "id": "rf-2",
+        "region": "US",
+        "currency": "USD"
+       },
+       {
+        "id": "rf-3",
+        "currency": "EUR"
+       },
+       {
+        "id": "rf-4",
+        "region": "EU",
+        "currency": "EUR"
+       }
+      ]
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "support-read-refund"
+      ],
+      "rows_dropped": 2,
+      "data": [
+       {
+        "id": "rf-1",
+        "region": "EU",
+        "currency": "EUR"
+       },
+       {
+        "id": "rf-4",
+        "region": "EU",
+        "currency": "EUR"
+       }
+      ],
+      "obligations": {
+       "row_filter": [
+        {
+         "column": "region",
+         "op": "eq",
+         "value": "EU"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "anna",
+       "agents": [
+        "support-orchestrator"
+       ],
+       "role": "support-agent",
+       "task": "ticket-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "billing.refund",
+       "id": "rf-2",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "rf-2",
+       "region": "US",
+       "currency": "USD"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "data": null,
+      "rows_dropped": 1
+     }
+    }
+   ]
+  }
+ ]
+}

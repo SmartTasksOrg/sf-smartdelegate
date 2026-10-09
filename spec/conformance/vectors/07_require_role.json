@@ -1,0 +1,64 @@
+{
+ "suite": "07_require_role",
+ "about": "`config` is merged into the conformance configuration for every case of this suite.",
+ "config": {
+  "require_role": true
+ },
+ "cases": [
+  {
+   "name": "an engine can insist that every token names a role",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_required"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent"
+     }
+    }
+   ]
+  }
+ ]
+}

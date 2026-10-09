@@ -1,0 +1,44 @@
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.secret/
+secrets.env
+.env
+# keys and engine state never belong in the repository
+state/
+*.key
+*.pem
+*.pk8.b64
+signing_key.*
+audit.jsonl
+# port build output
+target/
+node_modules/
+vendor/
+ports/go/smartdelegate-go
+# the bootstrap (bootstrap.sh / bootstrap.ps1): virtualenv, launchers, logs, reports
+.venv/
+.pytest_cache/
+ports/go/smartdelegate-go.exe
+# docker/.env holds your keys for docker compose; docker/.env.example is the template
+docker/.env
+
+# build output
+*.py[cod]
+venv/
+
+# secrets and credentials never belong in the repository
+.secure/
+*.env
+.env.*
+!.env.example
+.npmrc
+.pypirc
+.netrc
+_netrc
+id_rsa*
+id_ed25519*
+*.p12
+*.pfx

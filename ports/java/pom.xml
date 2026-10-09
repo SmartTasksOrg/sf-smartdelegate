@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  For Maven users: `mvn package` compiles src/main/java and writes
+  target/smartdelegate-0.3.0.jar with Main-Class dev.smartdelegate.Cli
+  (java -jar target/smartdelegate-0.3.0.jar info).
+
+  No dependencies. The tested build is ./build.sh (plain javac and jar); the
+  launchers in bin/ run build/smartdelegate.jar, not Maven's jar. The classes
+  in src/test/java are a program with a main method (run by
+  ./run_conformance.sh), not unit tests: Maven compiles them and runs nothing.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.smartdelegate</groupId>
+  <artifactId>smartdelegate</artifactId>
+  <version>0.3.0</version>
+  <packaging>jar</packaging>
+  <name>SmartDelegate (Java port)</name>
+  <description>Identity and access management for LLM agents: engine, REST client, REST daemon and command line.</description>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>dev.smartdelegate.Cli</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

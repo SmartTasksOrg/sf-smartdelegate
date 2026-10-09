@@ -1,0 +1,1435 @@
+{
+ "suite": "06_roles",
+ "about": "Role-scoped task tokens: a human lends an agent one of the roles they hold, for one task. The token can never carry more than the role's ceiling in roles.json.",
+ "cases": [
+  {
+   "name": "a role token carries the role's ceiling when no capability is asked for",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "user": "alice",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [],
+       "budget": {
+        "EUR": 10000
+       }
+      },
+      "expires_in": 600
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "role": "support-agent",
+       "cap": {
+        "actions": [
+         "read",
+         "create",
+         "update"
+        ],
+        "resources": [
+         "crm.customer/*",
+         "billing.refund/*"
+        ],
+        "deny_labels": [
+         "secret"
+        ],
+        "deny_fields": [],
+        "budget": {
+         "EUR": 10000
+        }
+       }
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "principal": {
+       "user": "alice",
+       "agent": "support-bot",
+       "role": "support-agent"
+      },
+      "rule": "DELEGATE-POLICY-PERMIT"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a human cannot lend a role they do not hold",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "dave",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held",
+       "rule": "DELEGATE-ROLE-NOT-HELD"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "escalation-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "nobody-here",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "no-such-role",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_role"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a role token cannot carry more than the role allows",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "budget": {
+        "EUR": 10001
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "budget": {
+        "USD": 1
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "delete"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "*"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "hr.salary/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "budgets": {}
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_cap"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a narrower capability under a role keeps what the role never sees",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ],
+       "budget": {
+        "EUR": 500
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii",
+        "secret"
+       ],
+       "deny_fields": [],
+       "budget": {
+        "EUR": 500
+       }
+      }
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_action",
+      "rule": "DELEGATE-CAPABILITY-ACTION"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-2"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_resource"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the role's deny labels mask fields that policy alone would show",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "plain": "token"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$plain",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "card": {
+        "last4": "4242"
+       },
+       "tier": "gold"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "card": {
+        "last4": "4242"
+       },
+       "tier": "gold"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "role": "auditor",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "auditor"
+     },
+     "save": {
+      "aud": "token"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$aud",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "card": {
+        "last4": "4242"
+       },
+       "tier": "gold"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "tier": "gold"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a role shortens the token's life and never lengthens it",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "escalation-9",
+      "ttl": 3600,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "expires_in": 300,
+      "expires_at": 1700000300
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "escalation-9",
+      "ttl": 60,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "expires_in": 60
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000301
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_expired"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a role can be limited to named tasks and named agents",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "ticket-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "summarizer",
+      "role": "supervisor",
+      "task": "escalation-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_exceeded"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "escalation-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "supervisor"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "role": "break-glass",
+      "task": "incident-7",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "break-glass",
+      "expires_in": 120,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "hr.salary/*"
+       ]
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "break-glass",
+      "task": "incident-7",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "policy can depend on the role the human is acting in",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 50000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "plain": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$plain",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 30000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$plain",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "supervisor",
+      "task": "escalation-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "sup": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$sup",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 30000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "policies": [
+       "supervisor-role-large-refund"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$sup",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-2"
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 30000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "role": "auditor",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "aud": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$aud",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$aud",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "auditor-role-is-read-only"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "sub-agents inherit the role and cannot change it",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "task": "ticket-7",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent",
+      "chain": [
+       "support-bot",
+       "refund-helper"
+      ]
+     },
+     "save": {
+      "c": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$c",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "role": "support-agent",
+       "task": "ticket-7"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "principal": {
+       "role": "support-agent",
+       "agent": "refund-helper"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "role": "supervisor",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "deny_labels": [
+        "secret"
+       ],
+       "budget": {
+        "EUR": 10001
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "plain": "token"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$plain",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "role": "support-agent",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "live group membership replaces the stored one for that token",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "dave",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "groups": [
+       "support"
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent"
+     },
+     "save": {
+      "d": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$d",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$d",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "policies": [
+       "support-read-customer"
+      ]
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$d",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "dc": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$dc",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ],
+       "role": "support-agent"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$dc",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "groups": [],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "groups": [],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "groups": [
+       "supervisors"
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "groups": "support",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "groups": [
+       7
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "group claims are normalised: known groups only, sorted, no duplicates",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "groups": [
+       "supervisors",
+       "not-a-group",
+       "support",
+       {
+        "type": "Group",
+        "id": "support"
+       },
+       {
+        "type": "Team",
+        "id": "x"
+       }
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "supervisors"
+        },
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a compliance user whose live membership was removed loses compliance-only data",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "groups": [
+       "compliance"
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "groups": [
+       "support"
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "s": "token"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$s",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "region": "US",
+       "ssn": "123-45-6789"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "region": "US"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "info lists the roles of the bundle",
+   "steps": [
+    {
+     "op": "info",
+     "input": {
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "roles": [
+       "auditor",
+       "break-glass",
+       "supervisor",
+       "support-agent"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

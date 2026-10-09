@@ -1,0 +1,27 @@
+{
+  "aws": {"rules": [
+    {"action": "read", "resource": "s3.object/*",
+     "allow": {"Action": ["s3:GetObject"], "Resource": ["arn:aws:s3:::crm-exports/{id}"]}},
+    {"action": "update", "resource": "s3.object/*",
+     "allow": {"Action": ["s3:GetObject", "s3:PutObject"], "Resource": ["arn:aws:s3:::crm-exports/{id}"]}},
+    {"action": "list", "resource": "s3.object/*",
+     "allow": {"Action": ["s3:ListBucket"], "Resource": ["arn:aws:s3:::crm-exports"]}}
+  ]},
+  "gcp": {"rules": [
+    {"action": "read", "resource": "gcs.object/*", "bucket": "crm-exports",
+     "role": "roles/storage.objectViewer", "prefix": "{id}", "permissions": ["storage.objects.get"]},
+    {"action": "update", "resource": "gcs.object/*", "bucket": "crm-exports",
+     "role": "roles/storage.objectCreator", "prefix": "{id}", "permissions": ["storage.objects.create"]}
+  ]},
+  "azure": {"rules": [
+    {"action": "read", "resource": "graph.mail/*", "scopes": ["https://graph.microsoft.com/Mail.Read"]},
+    {"action": "create", "resource": "graph.mail/*", "scopes": ["https://graph.microsoft.com/Mail.Send"]},
+    {"action": "read", "resource": "crm.api/*", "scopes": ["api://crm-api/Customers.Read"]},
+    {"action": "read", "resource": "blob.object/*",
+     "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/crm/providers/Microsoft.Storage/storageAccounts/crmdata/blobServices/default/containers/crm",
+     "data_actions": ["Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"]},
+    {"action": "update", "resource": "blob.object/*",
+     "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/crm/providers/Microsoft.Storage/storageAccounts/crmdata/blobServices/default/containers/crm",
+     "data_actions": ["Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"]}
+  ]}
+}

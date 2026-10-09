@@ -1,0 +1,21 @@
+{
+  "family": "Smart*",
+  "tool": "SmartDelegate",
+  "version": "0.3.0",
+  "iaiso_section": "§10 · Delegation",
+  "share_mode": "public",
+  "cross_promote": [
+    "SmartRoute",
+    "SmartSeal",
+    "SmartPangolin",
+    "SmartStandard",
+    "SmartCheck",
+    "SmartPrompt",
+    "SmartMoat",
+    "SmartFeed"
+  ],
+  "links": {
+    "iaiso": "https://iaiso.org",
+    "cloud": "https://smarttasks.cloud"
+  }
+}

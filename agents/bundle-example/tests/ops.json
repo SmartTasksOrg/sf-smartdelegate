@@ -1,0 +1,43 @@
+{
+  "about": "Policy unit tests for the two agent roles. Run with `smartdelegate policy test --bundle agents/bundle-example`. Tests run without tokens (`chain` states who is acting), so they exercise the policies, not the role ceilings; tests/test_agent_surface.py covers the ceilings with real tokens.",
+  "cases": [
+    {
+      "name": "the operator agent reads every monitoring tool",
+      "steps": [
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator"], "role": "sd-operator"}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "status"}},
+         "expect": {"effect": "allow", "policies": ["ops-operator-reads-monitoring"]}},
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator"], "role": "sd-operator"}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "audit_tail"}},
+         "expect": {"effect": "allow"}}
+      ]
+    },
+    {
+      "name": "the operator role never operates a privileged tool",
+      "steps": [
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator"], "role": "sd-operator"}, "action": "operate", "resource": {"path": "smartdelegate.ops", "id": "approve"}},
+         "expect": {"effect": "deny", "reason": "policy_forbid", "rule": "DELEGATE-POLICY-FORBID"}},
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator"], "role": "sd-operator"}, "action": "operate", "resource": {"path": "smartdelegate.ops", "id": "revoke_user"}},
+         "expect": {"effect": "deny", "reason": "policy_forbid"}}
+      ]
+    },
+    {
+      "name": "without the role, or as a sub-agent, nothing is permitted",
+      "steps": [
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator"]}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "status"}},
+         "expect": {"effect": "deny", "reason": "no_matching_permit"}},
+        {"op": "authorize", "input": {"chain": {"user": "olivia", "agents": ["smartdelegate-operator", "smartdelegate-operator"], "role": "sd-operator"}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "status"}},
+         "expect": {"effect": "deny", "reason": "no_matching_permit"}}
+      ]
+    },
+    {
+      "name": "the integrator agent reads status and nothing else",
+      "steps": [
+        {"op": "authorize", "input": {"chain": {"user": "ian", "agents": ["smartdelegate-integrator"], "role": "sd-integrator"}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "status"}},
+         "expect": {"effect": "allow", "policies": ["ops-integrator-reads-status"]}},
+        {"op": "authorize", "input": {"chain": {"user": "ian", "agents": ["smartdelegate-integrator"], "role": "sd-integrator"}, "action": "read", "resource": {"path": "smartdelegate.ops", "id": "audit_tail"}},
+         "expect": {"effect": "deny", "reason": "no_matching_permit"}},
+        {"op": "authorize", "input": {"chain": {"user": "ian", "agents": ["smartdelegate-integrator"], "role": "sd-integrator"}, "action": "operate", "resource": {"path": "smartdelegate.ops", "id": "reload"}},
+         "expect": {"effect": "deny", "reason": "policy_forbid"}}
+      ]
+    }
+  ]
+}

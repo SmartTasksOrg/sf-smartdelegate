@@ -1,0 +1,483 @@
+{
+ "suite": "01_tokens",
+ "cases": [
+  {
+   "name": "root token for a permitted user and agent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "user": "alice",
+      "chain": [
+       "support-bot"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "reason": "policy_permit",
+      "policies": [
+       "support-read-customer"
+      ],
+      "principal": {
+       "user": "alice",
+       "agent": "support-bot",
+       "chain": [
+        "support-bot"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "issuance is denied when no policy lets the user delegate",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "dave",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "rogue-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "issuance to an unregistered agent fails",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "ghost",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_agent"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a root token must state its capability",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_cap"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "re*d"
+       ],
+       "resources": [
+        "*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_cap"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "*"
+       ],
+       "deny_label": [
+        "secret"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_cap"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "*"
+       ],
+       "budget": {
+        "EUR": 12.5
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_cap"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "expired token is denied",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "ttl": 60
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000059
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000060
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_expired"
+     }
+    }
+   ]
+  },
+  {
+   "name": "garbage, missing and unsigned identities are denied",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "token": "abc.def.ghi",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_invalid"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_invalid"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "carol",
+       "agents": [
+        "support-bot"
+       ]
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "revoked token is denied",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "token_id": "$t_id",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": false,
+      "reason": "token_revoked"
+     }
+    }
+   ]
+  }
+ ]
+}

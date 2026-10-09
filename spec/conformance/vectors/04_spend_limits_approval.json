@@ -1,0 +1,1177 @@
+{
+ "suite": "04_spend_limits_approval",
+ "cases": [
+  {
+   "name": "a small refund is allowed and counted",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "policies": [
+       "refund-small"
+      ],
+      "obligations": {
+       "rate_limit": {
+        "limit": 3,
+        "window_seconds": 60,
+        "used": 0
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "spend is cumulative against the token budget",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 12000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000001,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000002,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000003,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 2000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    }
+   ]
+  },
+  {
+   "name": "no budget for the currency means no spend",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a sub-agent is held to its own smaller budget",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 3000
+       }
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 2000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000001,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 2000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    }
+   ]
+  },
+  {
+   "name": "sub-agents together cannot exceed the parent's budget",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 6000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "a": "token",
+      "a_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "b": "token",
+      "b_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$a",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$b",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 2000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$b",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 1000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 1
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    }
+   ]
+  },
+  {
+   "name": "dry run does not spend",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 5000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      },
+      "dry_run": true
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      },
+      "dry_run": true
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 1
+       }
+      },
+      "dry_run": true
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "budget_exceeded"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rate limit from a policy annotation",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000001,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000002,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000003,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "rate_limited"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000061,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a large refund waits for a human, and the approval is single use",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 90000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 15000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "refund-over-100-eur"
+      }
+     },
+     "save": {
+      "aid": "approval.id"
+     }
+    },
+    {
+     "op": "approve",
+     "input": {
+      "approval_id": "$aid",
+      "by": "alice",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "self_approval"
+      }
+     }
+    },
+    {
+     "op": "approve",
+     "input": {
+      "approval_id": "$aid",
+      "by": "carol",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "approval_denied"
+      }
+     }
+    },
+    {
+     "op": "approve",
+     "input": {
+      "approval_id": "not-a-real-id",
+      "by": "bob",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_approval"
+      }
+     }
+    },
+    {
+     "op": "approve",
+     "input": {
+      "approval_id": "$aid",
+      "by": "bob",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "by": "bob"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000005,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 15000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "policies": [
+       "refund-large-needs-approval"
+      ],
+      "obligations": {
+       "approved": {
+        "by": "bob"
+       }
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000006,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 15000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "approval_required"
+     }
+    }
+   ]
+  },
+  {
+   "name": "an approval expires",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "ttl": 3600
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 15000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "approval_required"
+     },
+     "save": {
+      "aid": "approval.id"
+     }
+    },
+    {
+     "op": "approve",
+     "input": {
+      "approval_id": "$aid",
+      "by": "bob",
+      "now": 1700000000,
+      "ttl": 60
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000061,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 15000
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "approval_required"
+     }
+    }
+   ]
+  },
+  {
+   "name": "above every permit there is no match; forbid overrides permit",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 90000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1"
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 20001
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1",
+       "attrs": {
+        "customer_owner": "alice"
+       }
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "no-refund-to-yourself"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "billing.refund",
+       "id": "r-1",
+       "attrs": {
+        "customer_owner": "zed"
+       }
+      },
+      "now": 1700000000,
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100
+       }
+      }
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    }
+   ]
+  }
+ ]
+}

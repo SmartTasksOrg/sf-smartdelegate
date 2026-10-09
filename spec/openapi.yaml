@@ -1,0 +1,637 @@
+openapi: 3.0.3
+info:
+  title: SmartDelegate decision daemon
+  version: 0.3.0
+  description: >
+    REST surface of `sf-smartdelegate serve` (reference: `src/sf_smartdelegate/daemon.py`).
+    The Rust, Node.js, Go and PHP ports serve the same routes. Request and response
+    bodies are the JSON documents of the in-process operations (`spec/API.md`,
+    `spec/ROLES.md`).
+
+
+    Status codes: 200 for every operation the engine carried out, including a
+    deny decision (`"effect": "deny"`); 400 for a body that is not JSON or is
+    too large (limit 8 MiB) and for every request the engine refused
+    (`"ok": false`); 401 for a missing or wrong key; 404 for an unknown path.
+
+
+    Keys are sent as `Authorization: Bearer <key>`. The admin key is accepted
+    wherever the pep key is. `/healthz` needs no key. `/v1/token` needs no key
+    for a token exchange or for issuance with an OIDC ID token, and the admin
+    key for issuance with `user`. The daemon does not terminate TLS.
+  license:
+    name: Apache-2.0
+servers:
+  - url: http://127.0.0.1:8181
+components:
+  securitySchemes:
+    pepKey:
+      type: http
+      scheme: bearer
+      description: Enforcement-point key (`pep_key` or SMARTDELEGATE_PEP_KEY)
+    adminKey:
+      type: http
+      scheme: bearer
+      description: Administrator key (`admin_key` or SMARTDELEGATE_ADMIN_KEY)
+  schemas:
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: role_not_held
+            message:
+              type: string
+            rule:
+              type: string
+              description: >
+                `DELEGATE-` plus the code in upper case with dashes. Present on
+                every error the engine produced. The daemon's own answers
+                (`invalid_input` for an unreadable body, `unauthorized`,
+                `not_found`) carry only `code` and `message`.
+              example: DELEGATE-ROLE-NOT-HELD
+    Cap:
+      type: object
+      required: [actions, resources]
+      additionalProperties: false
+      properties:
+        actions:
+          type: array
+          items: {type: string}
+        resources:
+          type: array
+          items: {type: string}
+          description: "<path>/<id>, one trailing * allowed"
+        deny_labels:
+          type: array
+          items: {type: string}
+        deny_fields:
+          type: array
+          items: {type: string}
+        budget:
+          type: object
+          additionalProperties: {type: integer}
+          description: currency -> minor units
+    EntityRef:
+      type: object
+      required: [type, id]
+      properties:
+        type: {type: string, example: Group}
+        id: {type: string, example: support}
+    Groups:
+      description: >
+        The human's group membership for this token: one group name, a list of
+        names, or a list of {type, id}. A name becomes {type: "Group", id}.
+        Groups that `entities.json` does not define are dropped.
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            oneOf:
+              - type: string
+              - $ref: '#/components/schemas/EntityRef'
+    Resource:
+      type: object
+      required: [path]
+      properties:
+        path: {type: string, example: crm.customer}
+        id: {type: string, default: any}
+        attrs:
+          type: object
+          additionalProperties: true
+          description: Supplied by the enforcement point, not by the agent
+    DecisionRequest:
+      type: object
+      required: [action, resource]
+      properties:
+        token:
+          type: string
+          description: >
+            Capability token. Required unless the engine is configured with
+            `trust_caller_chain` and `chain` is sent instead.
+        chain:
+          type: object
+          description: Only honoured with `trust_caller_chain`; no token, no ceiling
+          required: [user, agents]
+          properties:
+            user: {type: string}
+            agents: {type: array, items: {type: string}, minItems: 1}
+            tenant: {type: string}
+            task: {type: string}
+            role: {type: string}
+            groups: {$ref: '#/components/schemas/Groups'}
+        action: {type: string}
+        resource: {$ref: '#/components/schemas/Resource'}
+        context:
+          type: object
+          additionalProperties: true
+          description: >
+            Integers, strings, booleans, lists, objects; no floats, no nulls.
+            `iam` is reserved. `spend: {currency, amount}` triggers the budget check.
+        fields:
+          type: array
+          items: {type: string}
+          description: Limit field decisions to these; default is every catalogued field
+        data:
+          description: One record or a list of records. Required by /v1/filter, optional for /v1/explain
+        strict: {type: boolean, description: Deny when the data carries a denied field (for tool inputs)}
+        dry_run: {type: boolean}
+        explain: {type: boolean}
+        now: {type: integer, description: Only honoured with `allow_test_clock`}
+    FilterRequest:
+      allOf:
+        - $ref: '#/components/schemas/DecisionRequest'
+        - type: object
+          required: [data]
+    Obligations:
+      type: object
+      description: Empty on a deny
+      properties:
+        fields:
+          type: object
+          properties:
+            allow: {type: array, items: {type: string}}
+            deny: {type: array, items: {type: string}}
+            redact: {type: array, items: {type: string}}
+        row_filter:
+          type: array
+          items:
+            type: object
+            properties:
+              column: {type: string}
+              op: {type: string, enum: [eq]}
+              value: {}
+        rate_limit:
+          type: object
+          properties:
+            limit: {type: integer}
+            window_seconds: {type: integer}
+            used: {type: integer}
+        approved:
+          type: object
+          properties:
+            id: {type: string}
+            by: {type: string}
+    Principal:
+      type: object
+      nullable: true
+      description: null when no token could be verified
+      properties:
+        user: {type: string}
+        agent: {type: string}
+        chain: {type: array, items: {type: string}}
+        tenant: {type: string, nullable: true}
+        task: {type: string, nullable: true}
+        role: {type: string, nullable: true}
+        token_id: {type: string, nullable: true}
+    Decision:
+      type: object
+      required: [ok, effect, reason, rule, policies, policy_version, principal, obligations, decision_id]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        effect: {type: string, enum: [allow, deny]}
+        reason: {type: string, example: policy_permit}
+        rule:
+          type: string
+          description: "`DELEGATE-` plus the reason in upper case with dashes"
+          example: DELEGATE-POLICY-PERMIT
+        detail: {type: string}
+        policies: {type: array, items: {type: string}}
+        policy_version: {type: string}
+        decision_id: {type: string}
+        principal: {$ref: '#/components/schemas/Principal'}
+        obligations: {$ref: '#/components/schemas/Obligations'}
+        approval:
+          type: object
+          description: Present when the reason is approval_required
+          properties:
+            id: {type: string}
+            label: {type: string}
+        data:
+          description: filter only. The masked data; null on a deny
+        masked: {type: array, items: {type: string}}
+        rows_dropped: {type: integer}
+        shadow: {type: boolean, description: Present in shadow mode}
+        would_deny:
+          type: object
+          description: Shadow mode, when the request would have been denied
+          properties:
+            reason: {type: string}
+            detail: {type: string}
+        would_mask: {type: array, items: {type: string}, description: Shadow mode with data}
+        would_drop_rows: {type: integer, description: Shadow mode with data}
+        policy_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              policy: {type: string}
+              effect: {type: string, enum: [permit, forbid]}
+              error: {type: string}
+        explain:
+          type: array
+          items: {type: object}
+    TokenRequest:
+      type: object
+      description: >
+        Token exchange: `subject_token` + `actor` (no key). Issuance with an ID
+        token: `id_token` + `agent` (no key; `user` is removed by the daemon and
+        `groups` is ignored by the engine). Issuance by an administrator:
+        `user` + `agent` (admin key). `cap` is required for issuance unless
+        `role` is given.
+      properties:
+        subject_token: {type: string}
+        actor: {type: string}
+        id_token: {type: string}
+        user: {type: string}
+        agent: {type: string}
+        cap: {$ref: '#/components/schemas/Cap'}
+        role:
+          type: string
+          description: >
+            Issuance: a role of `roles.json` the user must hold; the token cannot
+            exceed its ceiling. Exchange: must equal the parent's role, else `widening`.
+        groups: {$ref: '#/components/schemas/Groups'}
+        ttl: {type: integer}
+        tenant: {type: string}
+        task: {type: string}
+        now: {type: integer, description: Only honoured with `allow_test_clock`}
+    TokenResponse:
+      type: object
+      required: [ok, token, token_id, expires_at, expires_in, user, chain, role, task, cap]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        token: {type: string}
+        token_type: {type: string, enum: [Bearer]}
+        issued_token_type: {type: string}
+        token_id: {type: string}
+        expires_at: {type: integer}
+        expires_in: {type: integer}
+        user: {type: string}
+        chain: {type: array, items: {type: string}}
+        role: {type: string, nullable: true}
+        task: {type: string, nullable: true}
+        cap: {$ref: '#/components/schemas/Cap'}
+    InspectResponse:
+      type: object
+      required: [ok, valid]
+      properties:
+        ok: {type: boolean}
+        valid: {type: boolean}
+        claims:
+          type: object
+          description: When valid. Includes `role` and `grp` when the token carries them
+        chain: {type: array, items: {type: string}}
+        user: {type: string}
+        expires_in: {type: integer}
+        reason: {type: string, description: When not valid}
+        detail: {type: string}
+    RevokeRequest:
+      type: object
+      description: >
+        One of `user`, `token`, `token_id`. `user` takes precedence and must be
+        a non-empty string.
+      properties:
+        token_id: {type: string}
+        token: {type: string}
+        user:
+          type: string
+          description: Offboarding. Every token of this user with `iat` at or before the time of the call
+        by: {type: string}
+    RevokeResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: {type: boolean}
+        revoked: {type: string, description: Token id (revocation by token or token id)}
+        revoked_user: {type: string, description: Revocation by user}
+        issued_up_to: {type: integer, description: Revocation by user. The cut-off time}
+    Info:
+      type: object
+      properties:
+        ok: {type: boolean}
+        version: {type: string, example: 0.3.0}
+        implementation: {type: string, example: python}
+        policy_version: {type: string}
+        bundle_signed_by: {type: string, nullable: true}
+        policies: {type: integer}
+        resources: {type: array, items: {type: string}}
+        roles: {type: array, items: {type: string}, description: Sorted role names of the bundle}
+        mode: {type: string, enum: [enforce, shadow]}
+        issuer: {type: string}
+        key_id: {type: string, nullable: true}
+        public_key: {type: string, nullable: true}
+        can_issue: {type: boolean}
+        oidc: {type: string, nullable: true, description: Issuer of the configured identity provider}
+  responses:
+    Bad:
+      description: Body not JSON or too large, or a request the engine refused
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Missing or wrong key
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+paths:
+  /healthz:
+    get:
+      summary: Liveness
+      operationId: healthz
+      security: []
+      responses:
+        '200':
+          description: '{"ok": true}'
+  /v1/info:
+    get:
+      summary: Version, policy version, roles, mode, key id, public key
+      operationId: info
+      security: [{pepKey: []}, {adminKey: []}]
+      responses:
+        '200':
+          description: Engine information
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Info'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/authorize:
+    post:
+      summary: Decide
+      operationId: authorize
+      security: [{pepKey: []}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DecisionRequest'}
+      responses:
+        '200':
+          description: Decision (allow or deny)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Decision'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/filter:
+    post:
+      summary: Decide and mask the supplied data
+      operationId: filter
+      security: [{pepKey: []}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FilterRequest'}
+      responses:
+        '200':
+          description: Decision with data
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Decision'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/explain:
+    post:
+      summary: Decide without side effects and return the trace
+      operationId: explain
+      security: [{pepKey: []}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DecisionRequest'}
+      responses:
+        '200':
+          description: Decision with explain
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Decision'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/obligations/apply:
+    post:
+      summary: Apply the obligations of an earlier allow decision to data
+      operationId: applyObligations
+      security: [{pepKey: []}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [obligations, data]
+              properties:
+                obligations: {$ref: '#/components/schemas/Obligations'}
+                data: {}
+                decision_id: {type: string, description: An audit record is written when this is given}
+      responses:
+        '200':
+          description: Masked data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  data: {}
+                  masked: {type: array, items: {type: string}}
+                  rows_dropped: {type: integer}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/token:
+    post:
+      summary: Token exchange, or root issuance
+      description: >
+        A body with `subject_token` is `exchange_token` (errors: token_invalid,
+        token_expired, token_revoked, widening, depth_exceeded, unknown_agent,
+        delegation_denied, invalid_cap). Any other body is `issue_token`
+        (errors: invalid_cap, unknown_agent, delegation_denied,
+        id_token_invalid, no_idp, unknown_role, role_not_held, role_exceeded,
+        role_required). Without `subject_token` and without `id_token` the
+        admin key is required.
+      operationId: token
+      security: [{}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TokenRequest'}
+      responses:
+        '200':
+          description: Token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenResponse'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/token/inspect:
+    post:
+      summary: Verify a token and show its claims
+      operationId: inspectToken
+      security: [{pepKey: []}, {adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string}
+      responses:
+        '200':
+          description: Validity and claims. An invalid token is `valid` false, not an error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/InspectResponse'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/revoke:
+    post:
+      summary: Revoke a token and its descendants, or every token already issued for a user
+      operationId: revoke
+      security: [{adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RevokeRequest'}
+      responses:
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RevokeResponse'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/approve:
+    post:
+      summary: Approve a held request
+      description: "Errors: unknown_approval, self_approval, approval_denied."
+      operationId: approve
+      security: [{adminKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approval_id, by]
+              properties:
+                approval_id: {type: string}
+                by: {type: string}
+                ttl: {type: integer}
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  approved: {type: string}
+                  by: {type: string}
+                  expires_at: {type: integer}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/approvals:
+    get:
+      summary: Pending and granted approvals
+      operationId: approvals
+      security: [{adminKey: []}]
+      responses:
+        '200':
+          description: Approvals
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  pending:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        label: {type: string}
+                        user: {type: string}
+                        agent: {type: string}
+                        action: {type: string}
+                        resource: {type: string}
+                        requested_at: {type: integer}
+                  granted:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        by: {type: string}
+                        exp: {type: integer}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/reload:
+    post:
+      summary: Reload the policy bundle
+      description: A bundle that fails to load leaves the old one in force and answers 400.
+      operationId: reload
+      security: [{adminKey: []}]
+      responses:
+        '200':
+          description: Engine information after the reload
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Info'}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/audit/verify:
+    get:
+      summary: Recompute the audit hash chain
+      description: "Errors: audit_broken (names the line), no_audit."
+      operationId: auditVerify
+      security: [{adminKey: []}]
+      responses:
+        '200':
+          description: Record count and head hash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  records: {type: integer}
+                  head: {type: string}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/admin/audit/tail:
+    get:
+      summary: Most recent audit records
+      operationId: auditTail
+      security: [{adminKey: []}]
+      parameters:
+        - name: n
+          in: query
+          schema: {type: integer, default: 20}
+      responses:
+        '200':
+          description: Records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  records: {type: array, items: {type: object}}
+        '400': {$ref: '#/components/responses/Bad'}
+        '401': {$ref: '#/components/responses/Unauthorized'}

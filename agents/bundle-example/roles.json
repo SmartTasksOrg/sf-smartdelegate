@@ -1,0 +1,32 @@
+{
+  "roles": {
+    "sd-operator": {
+      "description": "Read-only operations on a SmartDelegate engine: status, audit, pending approvals, anomaly summary. No privileged tool.",
+      "members": [{"type": "Group", "id": "sd-operators"}],
+      "cap": {
+        "actions": ["read"],
+        "resources": [
+          "smartdelegate.ops/status",
+          "smartdelegate.ops/audit_tail",
+          "smartdelegate.ops/audit_verify",
+          "smartdelegate.ops/pending_approvals",
+          "smartdelegate.ops/anomalies"
+        ]
+      },
+      "max_ttl": 900,
+      "tasks": ["ops-*"],
+      "agents": ["smartdelegate-operator"]
+    },
+    "sd-integrator": {
+      "description": "Integration work against a development engine: may read its status, nothing else.",
+      "members": [{"type": "Group", "id": "sd-integrators"}],
+      "cap": {
+        "actions": ["read"],
+        "resources": ["smartdelegate.ops/status"]
+      },
+      "max_ttl": 900,
+      "tasks": ["integrate-*"],
+      "agents": ["smartdelegate-integrator"]
+    }
+  }
+}

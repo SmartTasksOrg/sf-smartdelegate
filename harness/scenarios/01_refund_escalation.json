@@ -1,0 +1,408 @@
+{
+ "id": "01_refund_escalation",
+ "name": "Refund escalation",
+ "description": "A support agent's orchestrator hands refund work to a refund worker. A small refund goes through, a larger one waits for a supervisor, the task budget caps the total, and finance posts the payment under its own role. The human whose agent asked cannot approve, and neither can someone who is not a supervisor.",
+ "units": [
+  "support",
+  "finance"
+ ],
+ "cast": {
+  "agent": {
+   "group": "support",
+   "not_group": "support-supervisors"
+  },
+  "supervisor": {
+   "group": "support-supervisors"
+  },
+  "clerk": {
+   "group": "finance-clerks"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "agent",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}",
+   "save": "support_task",
+   "expect": "ok",
+   "why": "A support agent lends the orchestrator their support-agent role for this ticket."
+  },
+  {
+   "id": "s2",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "support_task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "{agent.region}",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "card.number"
+    ],
+    "visible": [
+     "name",
+     "notes",
+     "card.last4"
+    ]
+   },
+   "why": "The orchestrator reads the customer; the full card number is redacted for everyone."
+  },
+  {
+   "id": "s3",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "support_task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*",
+     "crm.customer/c-{n}"
+    ],
+    "budget": {
+     "{agent.currency}": 20000
+    }
+   },
+   "save": "refund_work",
+   "expect": "ok",
+   "why": "The orchestrator hands the refund part to the refund worker: refunds only, this customer only, the whole task budget."
+  },
+  {
+   "id": "s4",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "{agent.region}",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "notes",
+     "card.number",
+     "addresses[].geo"
+    ],
+    "visible": [
+     "name"
+    ]
+   },
+   "why": "The refund worker is a sub-agent: internal notes stop at the orchestrator."
+  },
+  {
+   "id": "s5",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-1",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 3000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "30.00 is under the 50.00 single-refund limit."
+  },
+  {
+   "id": "s6",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 6000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "60.00 is over 50.00: it waits for a support supervisor."
+  },
+  {
+   "id": "s7",
+   "actor": "agent",
+   "op": "approve",
+   "request": "s6",
+   "expect": "error:self_approval",
+   "why": "The human the agent acts for cannot approve their own agent's request."
+  },
+  {
+   "id": "s8",
+   "actor": "clerk",
+   "op": "approve",
+   "request": "s6",
+   "expect": "error:approval_denied",
+   "why": "A finance clerk is not a support supervisor."
+  },
+  {
+   "id": "s9",
+   "actor": "supervisor",
+   "op": "approve",
+   "request": "s6",
+   "expect": "ok",
+   "why": "A support supervisor approves the 60.00 refund."
+  },
+  {
+   "id": "s10",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 6000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The same request, now approved, goes through."
+  },
+  {
+   "id": "s11",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 6000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "An approval is used once: the same request again is held again."
+  },
+  {
+   "id": "s12",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-3",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 12000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:budget_exceeded",
+   "why": "90.00 are spent; 120.00 more would pass the 200.00 task budget. The budget is checked before anybody is asked to approve."
+  },
+  {
+   "id": "s13",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "refund_work",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "refund",
+    "requested_by": "{agent}",
+    "approved_by": "{supervisor}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 6000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Support does not post payments: the refund worker's token does not cover payments."
+  },
+  {
+   "id": "s14",
+   "actor": "support-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "post the approved refund",
+    "refund": "rf-{n}-2",
+    "amount": 6000,
+    "requested_by": "{agent}",
+    "approved_by": "{supervisor}"
+   },
+   "tokens": null,
+   "why": "The work item goes to finance. No token goes with it."
+  },
+  {
+   "id": "s15",
+   "actor": "clerk",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "ap-clerk",
+   "task": "refund-{n}",
+   "save": "finance_task",
+   "expect": "ok",
+   "why": "An accounts payable clerk lends the finance orchestrator their own role for the posting."
+  },
+  {
+   "id": "s16",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_task",
+   "action": "read",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "rf-{n}-2",
+    "order_id": "ord-{n}",
+    "customer_id": "c-{n}",
+    "region": "{agent.region}",
+    "amount": 6000,
+    "currency": "{agent.currency}",
+    "reason": "damaged item",
+    "status": "approved",
+    "requested_by": "{agent}"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "requested_by"
+    ]
+   },
+   "why": "Finance reads the refund it is asked to pay."
+  },
+  {
+   "id": "s17",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_task",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "refund",
+    "requested_by": "{agent}",
+    "approved_by": "{supervisor}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 6000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The clerk is neither the requester nor the approver; 60.00 is under the 1,000.00 release limit."
+  },
+  {
+   "id": "s18",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_task",
+   "action": "update",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "status": "paid"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "Finance marks the refund paid; status is the one refund field finance may write."
+  },
+  {
+   "id": "s19",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_task",
+   "action": "update",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "amount": 99000
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Finance cannot rewrite the amount of a refund."
+  }
+ ]
+}

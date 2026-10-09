@@ -1,0 +1,607 @@
+{
+ "suite": "05_guards",
+ "cases": [
+  {
+   "name": "tenant isolation",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "tenant": "acme"
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "tenant": "globex"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "tenant_mismatch"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "tenant": "acme"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    }
+   ]
+  },
+  {
+   "name": "resources outside the catalog are denied",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "*"
+       ],
+       "resources": [
+        "*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "warehouse.pallet",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "unknown_resource"
+     }
+    }
+   ]
+  },
+  {
+   "name": "capability must cover action and resource even when policy would permit",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_action"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-2"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_resource"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a wildcard capability does not create permission",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "*"
+       ],
+       "resources": [
+        "*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "delete",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "s-1",
+       "attrs": {
+        "frozen": false
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "an erroring forbid policy denies",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "hr.salary/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "s-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "policy_error"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "s-1",
+       "attrs": {
+        "frozen": false
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "policies": [
+       "compliance-read-salary"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "s-1",
+       "attrs": {
+        "frozen": true
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "frozen-salary-records"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "an obligation that cannot be resolved denies",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "erin",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "obligation_unresolved"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the caller cannot inject identity or malformed context",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "context": {
+       "iam": {
+        "user_id": "carol"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_context"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "context": {
+       "score": 1.5
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_context"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "context": "x",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_context"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    },
+    {
+     "op": "nonsense",
+     "input": {},
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_op"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "every decision is in a verifiable audit chain",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "delete",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_action"
+     }
+    },
+    {
+     "op": "audit_verify",
+     "input": {},
+     "expect": {
+      "ok": true,
+      "records": 3
+     }
+    },
+    {
+     "op": "audit_tail",
+     "input": {
+      "n": 1
+     },
+     "expect": {
+      "ok": true
+     }
+    }
+   ]
+  }
+ ]
+}

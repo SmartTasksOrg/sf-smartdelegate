@@ -1,0 +1,344 @@
+{
+ "id": "14_vendor_onboarding",
+ "name": "Vendor onboarding",
+ "description": "A buyer's agent onboards a vendor, compliance screens it, treasury enters the bank details and a procurement manager who did not onboard it activates it.",
+ "units": [
+  "procurement",
+  "compliance",
+  "finance"
+ ],
+ "cast": {
+  "buyer": {
+   "group": "procurement",
+   "not_group": "procurement-approvers"
+  },
+  "manager": {
+   "group": "procurement-approvers"
+  },
+  "auditor": {
+   "group": "compliance"
+  },
+  "treasurer": {
+   "group": "treasury"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "buyer",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "buyer",
+   "task": "vendor-{n}",
+   "save": "onboarding",
+   "expect": "ok",
+   "why": "A buyer lends the procurement orchestrator the buyer role."
+  },
+  {
+   "id": "s2",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "onboarding",
+   "action": "create",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Borealis Parts",
+    "region": "EU",
+    "status": "pending",
+    "contact_email": "sales@borealis.example",
+    "onboarded_by": "{buyer}"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The vendor is created, pending."
+  },
+  {
+   "id": "s3",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "onboarding",
+   "action": "update",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "bank": {
+     "iban": "SE4550000000058398257466"
+    }
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Procurement cannot enter bank details."
+  },
+  {
+   "id": "s4",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "onboarding",
+   "action": "update",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "status": "active"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Nor set the vendor active by editing its status."
+  },
+  {
+   "id": "s5",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "onboarding",
+   "action": "approve",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": {
+    "onboarded_by": "{buyer}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "Nor activate it: the buyer role carries no approve."
+  },
+  {
+   "id": "s6",
+   "actor": "procurement-orchestrator",
+   "op": "narrow",
+   "token": "onboarding",
+   "to": "vendor-screener",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "procurement.vendor/v-{n}"
+    ]
+   },
+   "save": "screening",
+   "expect": "ok",
+   "why": "The orchestrator hands the screening preparation to the vendor screener, read-only, this vendor."
+  },
+  {
+   "id": "s7",
+   "actor": "vendor-screener",
+   "op": "call",
+   "token": "screening",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Borealis Parts",
+    "region": "EU",
+    "status": "pending",
+    "contact_email": "sales@borealis.example",
+    "onboarded_by": "{buyer}",
+    "tax_id": "SE556677889901",
+    "risk_score": 3,
+    "bank": {
+     "iban": "SE4550000000058398257466",
+     "bic": "ESSESESS"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "tax_id",
+     "risk_score",
+     "bank.iban",
+     "bank.bic"
+    ],
+    "visible": [
+     "name",
+     "contact_email"
+    ]
+   },
+   "why": "The screener sees the public facts."
+  },
+  {
+   "id": "s8",
+   "actor": "procurement-orchestrator",
+   "op": "handoff",
+   "to": "compliance-orchestrator",
+   "item": {
+    "work": "screen vendor",
+    "vendor": "v-{n}"
+   },
+   "tokens": null,
+   "why": "The vendor goes to compliance for screening."
+  },
+  {
+   "id": "s9",
+   "actor": "auditor",
+   "op": "delegate",
+   "agent": "compliance-orchestrator",
+   "role": "auditor",
+   "task": "audit-{n}",
+   "save": "screen",
+   "expect": "ok",
+   "why": "A compliance auditor lends the compliance orchestrator the auditor role."
+  },
+  {
+   "id": "s10",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "screen",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Borealis Parts",
+    "region": "EU",
+    "status": "pending",
+    "contact_email": "sales@borealis.example",
+    "onboarded_by": "{buyer}",
+    "tax_id": "SE556677889901",
+    "risk_score": 3,
+    "bank": {
+     "iban": "SE4550000000058398257466",
+     "bic": "ESSESESS"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "tax_id",
+     "bank.iban",
+     "bank.bic"
+    ],
+    "visible": [
+     "risk_score",
+     "name"
+    ]
+   },
+   "why": "Compliance sees the risk score, not the tax id or the account."
+  },
+  {
+   "id": "s11",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "screen",
+   "action": "update",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "status": "active"
+   },
+   "strict": true,
+   "expect": "deny:capability_action",
+   "why": "Compliance looks and does not touch."
+  },
+  {
+   "id": "s12",
+   "actor": "compliance-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "enter bank details",
+    "vendor": "v-{n}"
+   },
+   "tokens": null,
+   "why": "Screening passed; the vendor goes to treasury."
+  },
+  {
+   "id": "s13",
+   "actor": "treasurer",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "treasury",
+   "task": "vendor-{n}",
+   "save": "treasury_task",
+   "expect": "ok",
+   "why": "A treasury analyst lends the finance orchestrator the treasury role."
+  },
+  {
+   "id": "s14",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "treasury_task",
+   "action": "update",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "bank": {
+     "iban": "SE4550000000058398257466",
+     "bic": "ESSESESS"
+    }
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "Treasury enters the bank details."
+  },
+  {
+   "id": "s15",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "treasury_task",
+   "action": "update",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "name": "Borealis Parts AB"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Treasury changes bank details and nothing else."
+  },
+  {
+   "id": "s16",
+   "actor": "manager",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "po-approver",
+   "task": "vendor-{n}",
+   "save": "activation",
+   "expect": "ok",
+   "why": "A procurement manager lends the orchestrator the po-approver role."
+  },
+  {
+   "id": "s17",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "activation",
+   "action": "approve",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": {
+    "onboarded_by": "{buyer}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager did not onboard this vendor and activates it."
+  },
+  {
+   "id": "s18",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "activation",
+   "action": "approve",
+   "resource": "procurement.vendor/v-{n}-own",
+   "attrs": {
+    "onboarded_by": "{manager}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Separation of duties: a vendor the manager onboarded is not the manager's to activate."
+  }
+ ]
+}

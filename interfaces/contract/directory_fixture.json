@@ -1,0 +1,25 @@
+{
+  "about": "The directory the DirectorySource checks expect. Load it into a test instance of your directory (or a test double), then run `python -m interfaces.contract --directory yourpkg.factory`. Users are matched by login name, groups by display name.",
+  "users": [
+    {"name": "alice", "active": true},
+    {"name": "bob", "active": true},
+    {"name": "carol", "active": true},
+    {"name": "dave", "active": true},
+    {"name": "erin", "active": false},
+    {"name": "frank", "active": true}
+  ],
+  "groups": [
+    {"name": "support", "parents": []},
+    {"name": "support-eu", "parents": ["support"]},
+    {"name": "supervisors", "parents": []},
+    {"name": "compliance", "parents": []}
+  ],
+  "memberships": {
+    "alice": ["support"],
+    "bob": ["support", "supervisors"],
+    "carol": ["compliance"],
+    "dave": [],
+    "erin": ["support"],
+    "frank": ["support-eu"]
+  }
+}

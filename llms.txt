@@ -1,0 +1,54 @@
+# SmartDelegate
+
+> Identity and access management for LLM agents. A human lends an agent one role they hold, for one task. The agent gets a short-lived capability token that cannot carry more than the role allows; a sub-agent's token can only carry less; every tool call is decided by Cedar policy with default deny; fields the principal may not see are removed before data reaches the model; budgets and human approvals are enforced; revoking a user ends every token issued for them; every decision is appended to a hash-chained audit log. Reference engine in Python, ports in Java, Node.js, Go, PHP and Rust, a REST daemon, HTTP and MCP proxies, bridges to identity providers and clouds. Build 0.3.0, Apache-2.0, no independent security review.
+
+In-process checks bind an agent that cooperates. The boundary an agent cannot skip is a proxy that alone holds the upstream credential and is the agent's only network path. Read LIMITATIONS before relying on any of it.
+
+## Start
+
+- [README](README.md): what it is, the rule ids, how it is tested, what was not run
+- [Limitations](docs/LIMITATIONS.md): what this build does not do; read first
+- [Usage examples](examples/usage.md): the three functions `delegate`, `narrow`, `check`, and the servers
+
+## Specification
+
+- [Operations](spec/API.md): every operation, JSON in and out; engine configuration; the HTTP and MCP proxy contracts
+- [Roles](spec/ROLES.md): `roles.json`, ceilings, issuance order, what happens when a human loses a role
+- [Policy subset](spec/POLICY_SUBSET.md): the portable Cedar subset every engine evaluates
+- [Porting](spec/PORTING.md): byte formats (canonical JSON, token, bundle, audit record, state directory) and the rules that are easy to get wrong
+- [OpenAPI](spec/openapi.yaml): the REST daemon
+- [Scope](docs/SCOPE.md): architecture, the decision API and decision order (section 7), schemas (section 8)
+- [Threat model](docs/THREAT_MODEL.md): per threat, what the system does, the test, and what it does not do
+
+## Integrate
+
+- [Integration guide](docs/INTEGRATE.md): "Connect your IAM", "Connect your agent system", the minimum viable integration, the checklist before calling it enforced
+- [Adopter interfaces](interfaces/README.md): IdentitySource, DirectorySource, RoleCatalog, EnforcementPoint, AgentRuntime, ApprovalChannel, AuditSink, RevocationFeed; reference implementations; the contract test kit
+- [Bridges](docs/BRIDGES.md): identity providers, directory sync, role ceilings from cloud permissions, down-scoped cloud credentials; what is verified (Keycloak) and what is not
+- [Integrations](integrations/README.md): the adapter, LangChain, LlamaIndex, function calling, MCP server, CI hooks
+- [MCP server](integrations/mcp/README.md): question tools, monitoring tools (`--ops`), privileged tools (`--admin`, `--allow-tools`), `--govern`
+- [Ports](ports/README.md): engines in other languages and what each contains
+
+## Governance
+
+- [Framework](docs/FRAMEWORK.md): what kind of control this is, the principles it implements and their limits, the IAIso mapping with its status, mappings to NIST AI RMF, ISO/IEC 42001, NIST SP 800-207 and OWASP guidance, the signals in and out
+- [IAIso map](spec/iaiso-map.json): the same mapping as data
+
+## For agents
+
+- [AGENTS.md](AGENTS.md): rules for an agent working in this repository
+- [Skill: delegate](skills/smartdelegate-delegate/SKILL.md): obtain and narrow a task token
+- [Skill: enforce](skills/smartdelegate-enforce/SKILL.md): authorize, run, filter around a tool call
+- [Skill: explain](skills/smartdelegate-explain/SKILL.md): why a request was denied, by rule id
+- [Skill: policy](skills/smartdelegate-policy/SKILL.md): author, test, compile and sign a bundle
+- [Skill: monitor](skills/smartdelegate-monitor/SKILL.md): health, audit chain, anomalies, what to escalate
+- [Skill: offboard](skills/smartdelegate-offboard/SKILL.md): revoke by user and verify
+- [Skill: integrate](skills/smartdelegate-integrate/SKILL.md): pointer to the guide and the contract kit
+- [Agent: operator](agents/smartdelegate-operator.md): read-mostly operations agent and the role it runs under
+- [Agent: integrator](agents/smartdelegate-integrator.md): integration agent and the role it runs under
+
+## Optional
+
+- [Coverage](docs/COVERAGE.md): what the scope asks for and this build lacks, per engine
+- [Build](docs/BUILD.md): bootstrap, toolchains, CI layout
+- [Changelog](CHANGELOG.md)

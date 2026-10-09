@@ -1,0 +1,5 @@
+{
+  "chain": {"user": "alice", "agents": ["support-bot"]},
+  "action": "read",
+  "resource": {"path": "crm.customer", "id": "c-1"}
+}

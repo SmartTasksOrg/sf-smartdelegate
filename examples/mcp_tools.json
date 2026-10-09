@@ -1,0 +1,10 @@
+{
+  "server": "crm",
+  "tools": {
+    "get_customer": {"action": "read", "resource": "crm.customer", "id": "args.customer_id"},
+    "update_customer": {"action": "update", "resource": "crm.customer", "id": "args.customer_id", "input": "args.changes"},
+    "refund": {"action": "create", "resource": "billing.refund", "id": "args.order_id",
+               "spend": {"currency": "args.currency", "amount": "args.amount"}},
+    "export_report": {"action": "read", "resource": "crm.customer"}
+  }
+}

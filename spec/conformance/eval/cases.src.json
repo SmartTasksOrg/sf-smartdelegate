@@ -1,0 +1,1731 @@
+{
+ "entities": [
+  {
+   "uid": {
+    "type": "Group",
+    "id": "everyone"
+   },
+   "attrs": {},
+   "parents": []
+  },
+  {
+   "uid": {
+    "type": "Group",
+    "id": "staff"
+   },
+   "attrs": {},
+   "parents": [
+    {
+     "type": "Group",
+     "id": "everyone"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "Group",
+    "id": "admins"
+   },
+   "attrs": {},
+   "parents": [
+    {
+     "type": "Group",
+     "id": "staff"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "User",
+    "id": "alice"
+   },
+   "attrs": {
+    "name": "alice",
+    "age": 30,
+    "tags": [
+     "a",
+     "b"
+    ],
+    "manager": {
+     "__entity": {
+      "type": "User",
+      "id": "bob"
+     }
+    },
+    "profile": {
+     "city": "Ghent",
+     "level": 3
+    },
+    "active": true
+   },
+   "parents": [
+    {
+     "type": "Group",
+     "id": "staff"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "User",
+    "id": "bob"
+   },
+   "attrs": {
+    "name": "bob",
+    "age": 50,
+    "tags": [],
+    "active": false
+   },
+   "parents": [
+    {
+     "type": "Group",
+     "id": "admins"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "Action",
+    "id": "readOnly"
+   },
+   "attrs": {},
+   "parents": []
+  },
+  {
+   "uid": {
+    "type": "Action",
+    "id": "read"
+   },
+   "attrs": {},
+   "parents": [
+    {
+     "type": "Action",
+     "id": "readOnly"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "Action",
+    "id": "list"
+   },
+   "attrs": {},
+   "parents": [
+    {
+     "type": "Action",
+     "id": "readOnly"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "Folder",
+    "id": "f1"
+   },
+   "attrs": {},
+   "parents": []
+  },
+  {
+   "uid": {
+    "type": "Doc",
+    "id": "d1"
+   },
+   "attrs": {
+    "owner": {
+     "__entity": {
+      "type": "User",
+      "id": "alice"
+     }
+    },
+    "public": false,
+    "size": 10,
+    "labels": [
+     "x",
+     "y"
+    ],
+    "name": "ab*c",
+    "meta": {
+     "v": 1
+    }
+   },
+   "parents": [
+    {
+     "type": "Folder",
+     "id": "f1"
+    }
+   ]
+  },
+  {
+   "uid": {
+    "type": "Doc",
+    "id": "d2"
+   },
+   "attrs": {},
+   "parents": []
+  },
+  {
+   "uid": {
+    "type": "NS::Thing",
+    "id": "t1"
+   },
+   "attrs": {
+    "n": -5
+   },
+   "parents": []
+  }
+ ],
+ "cases": [
+  {
+   "name": "permit everything",
+   "cedar": "@id(\"p\") permit(principal, action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "forbid overrides permit",
+   "cedar": "@id(\"p\") permit(principal, action, resource); @id(\"f\") forbid(principal, action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "several permits are all reasons",
+   "cedar": "@id(\"p\") permit(principal, action, resource); @id(\"q\") permit(principal == User::\"alice\", action, resource); @id(\"r\") permit(principal == User::\"bob\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "a forbid that does not apply leaves the permit",
+   "cedar": "@id(\"p\") permit(principal, action, resource); @id(\"f\") forbid(principal == User::\"bob\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "no permit applies",
+   "cedar": "@id(\"p\") permit(principal == User::\"bob\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal equals",
+   "cedar": "@id(\"p\") permit(principal == User::\"alice\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal in direct parent",
+   "cedar": "@id(\"p\") permit(principal in Group::\"staff\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal in transitive ancestor",
+   "cedar": "@id(\"p\") permit(principal in Group::\"everyone\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "bob"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal in is reflexive",
+   "cedar": "@id(\"p\") permit(principal in User::\"alice\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal not in group",
+   "cedar": "@id(\"p\") permit(principal in Group::\"admins\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal is type",
+   "cedar": "@id(\"p\") permit(principal is User, action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal is wrong type",
+   "cedar": "@id(\"p\") permit(principal is Group, action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal is type in group",
+   "cedar": "@id(\"p\") permit(principal is User in Group::\"everyone\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal is type in group it is not in",
+   "cedar": "@id(\"p\") permit(principal is User in Group::\"admins\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "principal unknown to the store, scope in",
+   "cedar": "@id(\"p\") permit(principal in Group::\"staff\", action, resource);",
+   "request": {
+    "principal": [
+     "User",
+     "ghost"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action equals",
+   "cedar": "@id(\"p\") permit(principal, action == Action::\"read\", resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action differs",
+   "cedar": "@id(\"p\") permit(principal, action == Action::\"write\", resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action in list",
+   "cedar": "@id(\"p\") permit(principal, action in [Action::\"write\", Action::\"read\"], resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action in list without it",
+   "cedar": "@id(\"p\") permit(principal, action in [Action::\"write\", Action::\"delete\"], resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action in action group",
+   "cedar": "@id(\"p\") permit(principal, action in Action::\"readOnly\", resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "action not in action group",
+   "cedar": "@id(\"p\") permit(principal, action in Action::\"readOnly\", resource);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "write",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "resource in folder",
+   "cedar": "@id(\"p\") permit(principal, action, resource in Folder::\"f1\");",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "resource not in folder",
+   "cedar": "@id(\"p\") permit(principal, action, resource in Folder::\"f1\");",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d2"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "resource is type",
+   "cedar": "@id(\"p\") permit(principal, action, resource is Doc);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "resource is namespaced type",
+   "cedar": "@id(\"p\") permit(principal, action, resource is NS::Thing);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "NS::Thing",
+     "t1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "resource is other type",
+   "cedar": "@id(\"p\") permit(principal, action, resource is Folder);",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "when true unless false",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { true } unless { false };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "unless true blocks",
+   "cedar": "@id(\"p\") permit(principal, action, resource) unless { true };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "two when clauses, second false",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { true } when { false };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "condition must be boolean",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { 1 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "attribute equals entity",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.owner == principal };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "attribute through entity reference",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.manager.name == \"bob\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "nested record attribute",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.profile.level >= 3 && principal.profile.city == \"Ghent\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "missing attribute is an error in a permit",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.owner == principal };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d2"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "missing attribute in a forbid is an error, cedar still allows",
+   "cedar": "@id(\"p\") permit(principal, action, resource); @id(\"f\") forbid(principal, action, resource) when { resource.public };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d2"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "has guards a missing attribute",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource has owner && resource.owner == principal };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d2"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "has is true when present",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource has owner };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "has on record",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context has spend && context.spend.amount <= 100 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "spend": {
+      "amount": 50
+     }
+    }
+   }
+  },
+  {
+   "name": "has on missing context key",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context has spend };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "has on entity not in store is false",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { !(resource has owner) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "nowhere"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "attribute of entity not in store is an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.owner == principal };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "nowhere"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "context attribute",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.flag };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "flag": true
+    }
+   }
+  },
+  {
+   "name": "missing context attribute is an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.flag };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "context entity reference",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.who == User::\"alice\" && context.who in Group::\"everyone\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "who": {
+      "__entity": {
+       "type": "User",
+       "id": "alice"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "and short-circuits past an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { false && resource.nope };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "or short-circuits past an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { true || resource.nope };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "and does not short-circuit when left is true",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { true && resource.nope };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "or right side must be boolean",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { false || 3 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "and left side must be boolean",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { 1 && true };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "not",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { !resource.public };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "not needs a boolean",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { !resource.size };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "if then else is lazy",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { if resource.public then resource.nope else true };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "if needs a boolean",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { if resource.size then true else true };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "equality across types is false, not an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size == \"10\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "inequality across types is true",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size != \"10\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "same id, different type",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { User::\"alice\" == Group::\"alice\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "long comparison",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size < 11 && resource.size <= 10 && resource.size > 9 && resource.size >= 10 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "comparison needs longs",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size < \"11\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "strings have no order",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { \"a\" < \"b\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "negative numbers",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.n == -5 && -resource.n == 5 && resource.n < 0 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "NS::Thing",
+     "t1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "arithmetic",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size + 5 == 15 && resource.size - 20 == -10 && resource.size * 3 == 30 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "addition overflow is an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.big + 1 > 0 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "big": 9223372036854775807
+    }
+   }
+  },
+  {
+   "name": "multiplication overflow is an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.big * 2 > 0 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "big": 9223372036854775807
+    }
+   }
+  },
+  {
+   "name": "negation overflow is an error",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { -context.small < 0 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "small": -9223372036854775808
+    }
+   }
+  },
+  {
+   "name": "arithmetic needs longs",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.name + 1 == 2 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "set contains",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.labels.contains(\"x\") && !resource.labels.contains(\"z\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "literal set contains attribute",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { [\"read\",\"list\"].contains(context.op) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "op": "list"
+    }
+   }
+  },
+  {
+   "name": "contains needs a set",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.name.contains(\"a\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "containsAll and containsAny",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.labels.containsAll([\"x\"]) && resource.labels.containsAny([\"z\",\"y\"]) && !resource.labels.containsAll([\"x\",\"z\"]) && !resource.labels.containsAny([\"q\"]) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "containsAll with empty set",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.labels.containsAll([]) && !resource.labels.containsAny([]) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "sets ignore order and duplicates",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { [1,2,2] == [2,1] && [\"a\"] != [\"b\"] };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "isEmpty",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.tags.isEmpty() };",
+   "request": {
+    "principal": [
+     "User",
+     "bob"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "isEmpty on non-empty set",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.tags.isEmpty() };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "record equality",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.meta == {v: 1} && resource.meta != {v: 2} && {a: 1, b: [true]} == {b: [true], a: 1} };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "record literal attribute",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { {\"k\": resource.size}.k == 10 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "attribute access needs a record or entity",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size.x == 1 };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "set of entities contains resource",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { [Doc::\"d1\", Doc::\"d9\"].contains(resource) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "mixed-type set equality",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { [1, \"a\", true] == [true, 1, \"a\"] };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "entity in set of entities",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal in [Group::\"admins\", Group::\"everyone\"] };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "entity in empty set",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal in [] };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "in needs an entity on the left",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { \"alice\" in Group::\"staff\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "in needs entities on the right",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal in \"staff\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "unknown entity is only in itself",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { User::\"ghost\" in User::\"ghost\" && !(User::\"ghost\" in Group::\"staff\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "is in an expression",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal is User && !(resource is User) && principal.manager is User in Group::\"admins\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "like with wildcard",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.name like \"al*\" && principal.name like \"*ice\" && principal.name like \"*\" && !(principal.name like \"bob*\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "like with escaped star",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.name like \"ab\\*c\" && !(resource.name like \"ab\\*d\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "like needs a string",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { resource.size like \"1*\" };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "like with star in the middle",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.name like \"a*c*\" && principal.name like \"a*i*e\" && !(principal.name like \"a*x*e\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   }
+  },
+  {
+   "name": "ip extension is outside the subset",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { ip(\"10.0.0.1\").isLoopback() };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   },
+   "unsupported": true
+  },
+  {
+   "name": "decimal extension is outside the subset",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { decimal(\"1.5\").lessThan(decimal(\"2.0\")) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   },
+   "unsupported": true
+  },
+  {
+   "name": "entity tags are outside the subset",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { principal.hasTag(\"x\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {}
+   },
+   "unsupported": true
+  },
+  {
+   "name": "containsAll with an empty argument still needs a set receiver",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.s.containsAll([]) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "s": "abc"
+    }
+   }
+  },
+  {
+   "name": "containsAny with an empty argument still needs a set receiver",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { !context.s.containsAny([]) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "s": 7
+    }
+   }
+  },
+  {
+   "name": "an erroring forbid from containsAll on a non-set",
+   "cedar": "@id(\"a\") permit(principal, action, resource); @id(\"f\") forbid(principal, action, resource) when { context.s.containsAll([]) };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "s": "abc"
+    }
+   }
+  },
+  {
+   "name": "containsAll argument must be a set even when the receiver is empty",
+   "cedar": "@id(\"p\") permit(principal, action, resource) when { context.e.containsAll(\"x\") };",
+   "request": {
+    "principal": [
+     "User",
+     "alice"
+    ],
+    "action": "read",
+    "resource": [
+     "Doc",
+     "d1"
+    ],
+    "context": {
+     "e": []
+    }
+   }
+  }
+ ]
+}

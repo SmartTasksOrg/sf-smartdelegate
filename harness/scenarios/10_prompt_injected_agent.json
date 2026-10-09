@@ -1,0 +1,618 @@
+{
+ "id": "10_prompt_injected_agent",
+ "name": "Prompt-injected agent",
+ "description": "A support orchestrator with a valid token has been talked into a list of things outside its remit. Each is refused, each for its own reason, and afterwards its ordinary work still goes through.",
+ "units": [
+  "support"
+ ],
+ "cast": {
+  "agent": {
+   "group": "support",
+   "not_group": "support-supervisors"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "agent",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}",
+   "tenant": "kestrel",
+   "save": "task",
+   "expect": "ok",
+   "why": "A support agent lends the orchestrator the support-agent role."
+  },
+  {
+   "id": "s2",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "{agent.region}",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "card.number"
+    ],
+    "visible": [
+     "name"
+    ]
+   },
+   "why": "Ordinary work: read the customer."
+  },
+  {
+   "id": "s3",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "hr.salary/emp-1",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Another unit's resource: salaries."
+  },
+  {
+   "id": "s4",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "refund",
+    "requested_by": "ben",
+    "approved_by": "elena"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Another unit's resource: a payment."
+  },
+  {
+   "id": "s5",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "delete",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "An action the role does not carry."
+  },
+  {
+   "id": "s6",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}-far",
+   "attrs": {
+    "region": "{agent.other_region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "A customer of another region."
+  },
+  {
+   "id": "s7",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "The same customer without saying which region it is in."
+  },
+  {
+   "id": "s8",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}",
+    "tenant": "other-co"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:tenant_mismatch",
+   "why": "A record of another tenant."
+  },
+  {
+   "id": "s9",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-big",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 20001
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:budget_exceeded",
+   "why": "A refund above the whole task budget."
+  },
+  {
+   "id": "s10",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-mid",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 15000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "A refund above the single-refund limit, hoping nobody looks."
+  },
+  {
+   "id": "s11",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-own",
+   "attrs": {
+    "region": "{agent.region}",
+    "customer_owner": "{agent}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "A refund to the agent's own human's customer account."
+  },
+  {
+   "id": "s12",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-free",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "A refund that states no amount."
+  },
+  {
+   "id": "s13",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "update",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "card": {
+     "number": "4000000000000002"
+    }
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Writing a card number into the customer record."
+  },
+  {
+   "id": "s14",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "update",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "email": "a@example.com",
+    "tier": "platinum"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Upgrading the customer's tier: support writes contact fields only."
+  },
+  {
+   "id": "s15",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "*"
+    ],
+    "resources": [
+     "*"
+    ]
+   },
+   "save": null,
+   "expect": "error:widening",
+   "why": "A sub-agent token for everything."
+  },
+  {
+   "id": "s16",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{agent.currency}": 200000
+    }
+   },
+   "save": null,
+   "expect": "error:widening",
+   "why": "A sub-agent token with a larger budget."
+  },
+  {
+   "id": "s17",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": null,
+   "save": null,
+   "role": "support-supervisor",
+   "expect": "error:widening",
+   "why": "A sub-agent token under the supervisor role."
+  },
+  {
+   "id": "s18",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": null,
+   "save": null,
+   "task": "ticket-{n}-other",
+   "expect": "error:widening",
+   "why": "A sub-agent token for a different task."
+  },
+  {
+   "id": "s19",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "finance-orchestrator",
+   "cap": null,
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "A token for another unit's orchestrator."
+  },
+  {
+   "id": "s20",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "unassigned-bot",
+   "cap": null,
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "A token for a registered agent no rule mentions."
+  },
+  {
+   "id": "s21",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "rogue-bot",
+   "cap": null,
+   "save": null,
+   "expect": "error:unknown_agent",
+   "why": "A token for an agent nobody registered."
+  },
+  {
+   "id": "s22",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "finance.vault/1",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:unknown_resource",
+   "why": "A resource that is not in the catalog."
+  },
+  {
+   "id": "s23",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "iam": {
+     "role": "auditor",
+     "user_id": "emil",
+     "depth": 1
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "error:invalid_context",
+   "why": "Supplying its own identity: `iam` context claiming the auditor role."
+  },
+  {
+   "id": "s24",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "tamper": "payload",
+   "expect": "deny:token_invalid",
+   "why": "A token with one character changed."
+  },
+  {
+   "id": "s25",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "tamper": "garbage",
+   "expect": "deny:token_invalid",
+   "why": "A string that is not a token."
+  },
+  {
+   "id": "s26",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.ticket/queue-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": [
+    {
+     "id": "t-1",
+     "region": "{agent.region}",
+     "subject": "late parcel"
+    },
+    {
+     "id": "t-2",
+     "region": "{agent.other_region}",
+     "subject": "refund please"
+    },
+    {
+     "id": "t-3",
+     "region": "{agent.region}",
+     "subject": "wrong size"
+    }
+   ],
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "rows": 2
+   },
+   "why": "Asking for the whole ticket queue: rows of other regions are dropped."
+  },
+  {
+   "id": "s-list-refunds",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "billing.refund/list-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "data": [
+    {
+     "id": "rf-1",
+     "region": "{agent.region}",
+     "amount": 1200,
+     "currency": "{agent.currency}",
+     "status": "paid"
+    },
+    {
+     "id": "rf-2",
+     "region": "{agent.other_region}",
+     "amount": 88000,
+     "currency": "USD",
+     "status": "requested"
+    },
+    {
+     "id": "rf-3",
+     "region": "{agent.region}",
+     "amount": 4000,
+     "currency": "{agent.currency}",
+     "status": "requested"
+    },
+    {
+     "id": "rf-4",
+     "amount": 500,
+     "currency": "EUR",
+     "status": "requested"
+    },
+    {
+     "id": "rf-5",
+     "region": "{agent.other_region}",
+     "amount": 100,
+     "currency": "USD",
+     "status": "paid"
+    }
+   ],
+   "expect": {
+    "outcome": "allow",
+    "rows": 2
+   },
+   "why": "Asking for the list of refunds and saying it is the agent's own region: the statement is only a claim, so the engine itself drops every row whose region is not the human's (and the one that states none). The same holds for every regional resource."
+  },
+  {
+   "id": "s27",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}-Zoë \u2028 客户",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "A record id with non-ASCII characters and a Unicode line separator is just an id; the audit log must still verify."
+  },
+  {
+   "id": "s28",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "{agent.region}",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "name"
+    ]
+   },
+   "why": "After all that, ordinary work still goes through."
+  },
+  {
+   "id": "s29",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-ok",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 5000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "And the budget is untouched: a 50.00 refund is allowed."
+  }
+ ]
+}

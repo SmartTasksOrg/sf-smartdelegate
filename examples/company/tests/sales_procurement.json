@@ -1,0 +1,949 @@
+{
+ "about": "Sales and procurement: pricing fields, the third level, purchase orders, vendors.",
+ "cases": [
+  {
+   "name": "the sales orchestrator sees prices but not the margin; a sales manager sees the margin too",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "k-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "k-1",
+       "customer_id": "c-1",
+       "region": "EU",
+       "status": "draft",
+       "term_months": 24,
+       "signatory": "A. Lovelace",
+       "clauses": [
+        {
+         "title": "Liability",
+         "text": "capped at fees paid"
+        }
+       ],
+       "pricing": {
+        "list_price": 12000000,
+        "discount_pct": 15,
+        "margin_pct": 38
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "pricing.margin_pct"
+      ]
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-manager",
+       "task": "deal-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "k-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "k-1",
+       "customer_id": "c-1",
+       "region": "EU",
+       "status": "draft",
+       "term_months": 24,
+       "signatory": "A. Lovelace",
+       "clauses": [
+        {
+         "title": "Liability",
+         "text": "capped at fees paid"
+        }
+       ],
+       "pricing": {
+        "list_price": 12000000,
+        "discount_pct": 15,
+        "margin_pct": 38
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": []
+     }
+    }
+   ]
+  },
+  {
+   "name": "the contract summarizer and its clause extractor never see pricing",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator",
+        "contract-summarizer"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "k-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "k-1",
+       "customer_id": "c-1",
+       "region": "EU",
+       "status": "draft",
+       "term_months": 24,
+       "signatory": "A. Lovelace",
+       "clauses": [
+        {
+         "title": "Liability",
+         "text": "capped at fees paid"
+        }
+       ],
+       "pricing": {
+        "list_price": 12000000,
+        "discount_pct": 15,
+        "margin_pct": 38
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "pricing.discount_pct",
+       "pricing.list_price",
+       "pricing.margin_pct"
+      ]
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator",
+        "contract-summarizer",
+        "clause-extractor"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "k-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "k-1",
+       "customer_id": "c-1",
+       "region": "EU",
+       "status": "draft",
+       "term_months": 24,
+       "signatory": "A. Lovelace",
+       "clauses": [
+        {
+         "title": "Liability",
+         "text": "capped at fees paid"
+        }
+       ],
+       "pricing": {
+        "list_price": 12000000,
+        "discount_pct": 15,
+        "margin_pct": 38
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "pricing.discount_pct",
+       "pricing.list_price",
+       "pricing.margin_pct"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a third-level agent reads and does not write",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator",
+        "contract-summarizer",
+        "clause-extractor"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "o-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "third-level-agents-are-read-only"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a contract of another region is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "k-2",
+       "attrs": {
+        "region": "US"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "sales reads customers without notes and card data",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "addresses[].geo",
+       "card.last4",
+       "card.number",
+       "notes"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a sales manager approves a discount on someone else's deal, not on their own",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-manager",
+       "task": "deal-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "o-1",
+       "attrs": {
+        "region": "EU",
+        "owner": "petra"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-manager",
+       "task": "deal-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "o-2",
+       "attrs": {
+        "region": "EU",
+        "owner": "sofia"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-discount-approver-is-not-owner"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "contract-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "o-1",
+       "attrs": {
+        "region": "EU",
+        "owner": "quinn"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a buyer raises a purchase order but cannot set who approved it",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1"
+      },
+      "data": {
+       "id": "po-1",
+       "vendor_id": "v-1",
+       "requested_by": "uma",
+       "amount": 250000,
+       "currency": "EUR"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1"
+      },
+      "data": {
+       "id": "po-1",
+       "approved_by": "wendy"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "field_denied"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the requester of a purchase order does not approve it; another procurement manager does",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "wendy",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "po-approver",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1",
+       "attrs": {
+        "requested_by": "uma"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "wendy",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "po-approver",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-2",
+       "attrs": {
+        "requested_by": "wendy"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-po-approver-is-not-requester"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "wendy",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "po-approver",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-1",
+       "attrs": {
+        "requested_by": "viktor"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a requisitioner raises a requisition and cannot update or approve it",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "requisitioner",
+       "task": "req-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-3"
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "requisitioner",
+       "task": "req-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-3"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "procurement-orchestrator",
+        "po-drafter"
+       ],
+       "role": "requisitioner",
+       "task": "req-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "procurement.po",
+       "id": "po-3"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "procurement never sees vendor bank details; whoever onboarded a vendor does not activate it",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "id": "v-1",
+       "name": "Acme Tooling",
+       "region": "EU",
+       "status": "active",
+       "contact_email": "ap@acme.example",
+       "tax_id": "DE123",
+       "risk_score": 2,
+       "bank": {
+        "iban": "DE89370400440532013000",
+        "bic": "COBADEFF"
+       },
+       "onboarded_by": "uma"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "bank.bic",
+       "bank.iban",
+       "tax_id"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "wendy",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "po-approver",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1",
+       "attrs": {
+        "onboarded_by": "uma"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "wendy",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "po-approver",
+       "task": "po-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1",
+       "attrs": {
+        "onboarded_by": "wendy"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-vendor-activator-is-not-onboarder"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a buyer cannot set a vendor's status after creation or its bank details ever",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "status": "active"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "field_denied"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "uma",
+       "agents": [
+        "procurement-orchestrator"
+       ],
+       "role": "buyer",
+       "task": "po-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "bank": {
+        "iban": "DE00"
+       }
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "field_denied"
+     }
+    }
+   ]
+  },
+  {
+   "name": "lists of opportunities and contracts: rows of other regions are dropped whatever region the request states",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "deal-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "list",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": [
+       {
+        "id": "o-1",
+        "region": "EU",
+        "stage": "won"
+       },
+       {
+        "id": "o-2",
+        "region": "APAC",
+        "stage": "lead"
+       },
+       {
+        "id": "o-3",
+        "region": "US",
+        "stage": "lead"
+       }
+      ]
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "sales-read-opportunity"
+      ],
+      "rows_dropped": 2,
+      "data": [
+       {
+        "id": "o-1",
+        "region": "EU",
+        "stage": "won"
+       }
+      ],
+      "obligations": {
+       "row_filter": [
+        {
+         "column": "region",
+         "op": "eq",
+         "value": "EU"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "deal-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "sales.contract",
+       "id": "list",
+       "attrs": {
+        "region": "EU"
+       }
+      },
+      "data": [
+       {
+        "id": "k-1",
+        "region": "US",
+        "status": "draft"
+       },
+       {
+        "id": "k-2",
+        "region": "EU",
+        "status": "signed"
+       }
+      ]
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "sales-read-contract"
+      ],
+      "rows_dropped": 1,
+      "data": [
+       {
+        "id": "k-2",
+        "region": "EU",
+        "status": "signed"
+       }
+      ],
+      "obligations": {
+       "row_filter": [
+        {
+         "column": "region",
+         "op": "eq",
+         "value": "EU"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "petra",
+       "agents": [
+        "sales-orchestrator"
+       ],
+       "role": "sales-rep",
+       "task": "deal-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "sales.opportunity",
+       "id": "o-1",
+       "attrs": {
+        "region": "EU"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "sales-write-opportunity"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

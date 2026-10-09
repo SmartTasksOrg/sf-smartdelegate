@@ -1,0 +1,540 @@
+{
+ "id": "05_contract_review",
+ "name": "Sales contract review, three levels deep",
+ "description": "A sales orchestrator hands a read-only slice of one contract to a summarizer, which hands it on to a clause extractor. Narrowing holds at every hop, pricing never leaves the orchestrator, the third level cannot write, and there is no fourth level.",
+ "units": [
+  "sales"
+ ],
+ "cast": {
+  "rep": {
+   "group": "sales",
+   "not_group": "sales-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "rep",
+   "op": "delegate",
+   "agent": "sales-orchestrator",
+   "role": "sales-rep",
+   "task": "contract-{n}",
+   "save": "deal",
+   "expect": "ok",
+   "why": "An account executive lends the sales orchestrator the sales-rep role for this contract."
+  },
+  {
+   "id": "s2",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "deal",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "customer_id": "c-{n}",
+    "region": "{rep.region}",
+    "status": "draft",
+    "term_months": 24,
+    "signatory": "A. Lovelace",
+    "clauses": [
+     {
+      "title": "Liability",
+      "text": "capped at fees paid"
+     },
+     {
+      "title": "Termination",
+      "text": "90 days notice"
+     }
+    ],
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "pricing.margin_pct"
+    ],
+    "visible": [
+     "pricing.list_price",
+     "pricing.discount_pct",
+     "clauses"
+    ]
+   },
+   "why": "The orchestrator sees prices and discount; the margin is for sales managers."
+  },
+  {
+   "id": "s-list-contracts",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "deal",
+   "action": "read",
+   "resource": "sales.contract/list-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "data": [
+    {
+     "id": "k-a",
+     "region": "{rep.other_region}",
+     "status": "signed",
+     "pricing": {
+      "list_price": 900000
+     }
+    },
+    {
+     "id": "k-b",
+     "region": "{rep.region}",
+     "status": "draft",
+     "pricing": {
+      "list_price": 12000000
+     }
+    },
+    {
+     "id": "k-c",
+     "region": "{rep.other_region}",
+     "status": "draft"
+    }
+   ],
+   "expect": {
+    "outcome": "allow",
+    "rows": 1,
+    "visible": [
+     "pricing.list_price"
+    ]
+   },
+   "why": "A list of contracts: whatever region the request states, the rows of other regions are dropped by the engine."
+  },
+  {
+   "id": "s-list-opportunities",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "deal",
+   "action": "read",
+   "resource": "sales.opportunity/list-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "data": [
+    {
+     "id": "o-a",
+     "region": "{rep.region}",
+     "stage": "lead",
+     "owner": "{rep}"
+    },
+    {
+     "id": "o-b",
+     "region": "{rep.other_region}",
+     "stage": "won",
+     "owner": "someone"
+    },
+    {
+     "id": "o-c",
+     "region": "{rep.region}",
+     "stage": "won",
+     "owner": "{rep}"
+    }
+   ],
+   "expect": {
+    "outcome": "allow",
+    "rows": 2
+   },
+   "why": "The same for the list of opportunities."
+  },
+  {
+   "id": "s3",
+   "actor": "sales-orchestrator",
+   "op": "narrow",
+   "token": "deal",
+   "to": "contract-summarizer",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "sales.contract/k-{n}"
+    ],
+    "deny_labels": [
+     "pricing"
+    ]
+   },
+   "save": "summary",
+   "expect": "ok",
+   "why": "The orchestrator hands the summarizer a read-only slice of this one contract, without pricing."
+  },
+  {
+   "id": "s4",
+   "actor": "contract-summarizer",
+   "op": "call",
+   "token": "summary",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "customer_id": "c-{n}",
+    "region": "{rep.region}",
+    "status": "draft",
+    "term_months": 24,
+    "signatory": "A. Lovelace",
+    "clauses": [
+     {
+      "title": "Liability",
+      "text": "capped at fees paid"
+     },
+     {
+      "title": "Termination",
+      "text": "90 days notice"
+     }
+    ],
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "pricing.list_price",
+     "pricing.discount_pct",
+     "pricing.margin_pct"
+    ],
+    "visible": [
+     "clauses",
+     "term_months"
+    ]
+   },
+   "why": "The summarizer reads the clauses and no pricing field."
+  },
+  {
+   "id": "s5",
+   "actor": "contract-summarizer",
+   "op": "call",
+   "token": "summary",
+   "action": "read",
+   "resource": "sales.contract/k-{n}-other",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Another contract is outside the slice."
+  },
+  {
+   "id": "s6",
+   "actor": "contract-summarizer",
+   "op": "narrow",
+   "token": "summary",
+   "to": "clause-extractor",
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "sales.contract/*"
+    ]
+   },
+   "save": null,
+   "expect": "error:widening",
+   "why": "The summarizer cannot hand on more than it has."
+  },
+  {
+   "id": "s7",
+   "actor": "contract-summarizer",
+   "op": "narrow",
+   "token": "summary",
+   "to": "clause-extractor",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "sales.contract/k-{n}"
+    ],
+    "deny_labels": [
+     "secret",
+     "card",
+     "bank",
+     "salary",
+     "hr-confidential"
+    ]
+   },
+   "save": null,
+   "cap_exact": true,
+   "expect": "error:widening",
+   "why": "Nor can it drop the pricing exclusion it was given."
+  },
+  {
+   "id": "s8",
+   "actor": "contract-summarizer",
+   "op": "narrow",
+   "token": "summary",
+   "to": "quote-builder",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "sales.contract/k-{n}"
+    ]
+   },
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "The summarizer may hand work to the clause extractor only."
+  },
+  {
+   "id": "s9",
+   "actor": "contract-summarizer",
+   "op": "narrow",
+   "token": "summary",
+   "to": "clause-extractor",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "sales.contract/k-{n}"
+    ]
+   },
+   "save": "clauses",
+   "expect": "ok",
+   "why": "The summarizer hands the same slice to the clause extractor: the third level."
+  },
+  {
+   "id": "s10",
+   "actor": "clause-extractor",
+   "op": "call",
+   "token": "clauses",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "customer_id": "c-{n}",
+    "region": "{rep.region}",
+    "status": "draft",
+    "term_months": 24,
+    "signatory": "A. Lovelace",
+    "clauses": [
+     {
+      "title": "Liability",
+      "text": "capped at fees paid"
+     },
+     {
+      "title": "Termination",
+      "text": "90 days notice"
+     }
+    ],
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "pricing.list_price",
+     "pricing.discount_pct",
+     "pricing.margin_pct"
+    ],
+    "visible": [
+     "clauses"
+    ]
+   },
+   "why": "The extractor reads the clauses and no pricing field."
+  },
+  {
+   "id": "s11",
+   "actor": "clause-extractor",
+   "op": "call",
+   "token": "clauses",
+   "action": "update",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "status": "reviewed"
+   },
+   "strict": true,
+   "expect": "deny:capability_action",
+   "why": "Its token is read-only."
+  },
+  {
+   "id": "s12",
+   "actor": "clause-extractor",
+   "op": "narrow",
+   "token": "clauses",
+   "to": "quote-builder",
+   "cap": null,
+   "save": null,
+   "expect": "error:depth_exceeded|error:delegation_denied",
+   "why": "There is no fourth level: the engine's depth limit (3) stops it, or the delegation policy on a daemon configured deeper."
+  },
+  {
+   "id": "s13",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "deal",
+   "action": "read",
+   "resource": "sales.contract/k-{n}-x",
+   "attrs": {
+    "region": "{rep.other_region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "A contract of another region is refused for a sales rep."
+  },
+  {
+   "id": "s14",
+   "actor": "sales-orchestrator",
+   "op": "narrow",
+   "token": "deal",
+   "to": "quote-builder",
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "sales.opportunity/o-{n}"
+    ]
+   },
+   "save": "quoting",
+   "expect": "ok",
+   "why": "The orchestrator hands the opportunity to the quote builder, with update."
+  },
+  {
+   "id": "s15",
+   "actor": "quote-builder",
+   "op": "call",
+   "token": "quoting",
+   "action": "update",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "stage": "proposal"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "A second-level agent may write what its token carries."
+  },
+  {
+   "id": "s16",
+   "actor": "sales-orchestrator",
+   "op": "narrow",
+   "token": "deal",
+   "to": "contract-summarizer",
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "sales.opportunity/o-{n}"
+    ]
+   },
+   "save": "summary_rw",
+   "expect": "ok",
+   "why": "The orchestrator gives the summarizer the opportunity with update as well."
+  },
+  {
+   "id": "s17",
+   "actor": "contract-summarizer",
+   "op": "narrow",
+   "token": "summary_rw",
+   "to": "clause-extractor",
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "sales.opportunity/o-{n}"
+    ]
+   },
+   "save": "clauses_rw",
+   "expect": "ok",
+   "why": "The summarizer hands that on unchanged."
+  },
+  {
+   "id": "s18",
+   "actor": "clause-extractor",
+   "op": "call",
+   "token": "clauses_rw",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "o-{n}",
+    "region": "{rep.region}",
+    "owner": "{rep}",
+    "stage": "proposal",
+    "amount": 12000000,
+    "discount_pct": 15,
+    "notes": "champion left"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "amount",
+     "discount_pct",
+     "notes"
+    ],
+    "visible": [
+     "stage"
+    ]
+   },
+   "why": "The third level reads."
+  },
+  {
+   "id": "s19",
+   "actor": "clause-extractor",
+   "op": "call",
+   "token": "clauses_rw",
+   "action": "update",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "stage": "won"
+   },
+   "strict": true,
+   "expect": "deny:policy_forbid",
+   "why": "Company rule: an agent three steps from the human does not write, even with a token that carries update."
+  }
+ ]
+}

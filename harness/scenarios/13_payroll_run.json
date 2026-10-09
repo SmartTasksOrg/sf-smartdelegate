@@ -1,0 +1,325 @@
+{
+ "id": "13_payroll_run",
+ "name": "Payroll run",
+ "description": "An HR manager's agent updates a salary, payroll calculates and raises the payroll payment, and a finance approver releases it. Payroll cannot raise other payments, accounts payable cannot raise payroll payments.",
+ "units": [
+  "hr",
+  "finance"
+ ],
+ "cast": {
+  "hr_manager": {
+   "group": "hr-managers"
+  },
+  "payroll": {
+   "group": "payroll"
+  },
+  "approver": {
+   "group": "finance-approvers"
+  },
+  "clerk": {
+   "group": "finance-clerks"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "hr_manager",
+   "op": "delegate",
+   "agent": "hr-orchestrator",
+   "role": "hr-manager",
+   "task": "salary-{n}",
+   "save": "salary_task",
+   "expect": "ok",
+   "why": "An HR manager lends the HR orchestrator the hr-manager role."
+  },
+  {
+   "id": "s2",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "salary_task",
+   "action": "update",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "base": 5400000,
+    "bonus": 400000
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The salary is updated."
+  },
+  {
+   "id": "s3",
+   "actor": "hr-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "run payroll",
+    "period": "2026-10"
+   },
+   "tokens": null,
+   "why": "HR tells finance the salaries are final."
+  },
+  {
+   "id": "s4",
+   "actor": "payroll",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "payroll-officer",
+   "task": "payroll-{n}",
+   "save": "payroll_task",
+   "expect": "ok",
+   "why": "A payroll officer lends the finance orchestrator the payroll-officer role."
+  },
+  {
+   "id": "s5",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "payroll_task",
+   "to": "payroll-calculator",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "hr.salary/*",
+     "hr.employee/*"
+    ]
+   },
+   "save": "calculation",
+   "expect": "ok",
+   "why": "The orchestrator hands the calculation to the payroll calculator, read-only."
+  },
+  {
+   "id": "s6",
+   "actor": "payroll-calculator",
+   "op": "call",
+   "token": "calculation",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "employee_id": "emp-{n}",
+    "currency": "EUR",
+    "grade": "L3",
+    "base": 5400000,
+    "bonus": 400000,
+    "notes": "retention"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "notes"
+    ],
+    "visible": [
+     "base",
+     "bonus"
+    ]
+   },
+   "why": "The calculator reads the figures."
+  },
+  {
+   "id": "s7",
+   "actor": "payroll-calculator",
+   "op": "call",
+   "token": "calculation",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}",
+   "attrs": {
+    "kind": "payroll"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 2500000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The calculator calculates; it does not pay."
+  },
+  {
+   "id": "s8",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}",
+   "attrs": {
+    "kind": "payroll"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 2500000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "Every payroll payment waits for a finance approver."
+  },
+  {
+   "id": "s9",
+   "actor": "payroll",
+   "op": "approve",
+   "request": "s8",
+   "expect": "error:self_approval",
+   "why": "The payroll officer cannot release their own agent's payment."
+  },
+  {
+   "id": "s10",
+   "actor": "hr_manager",
+   "op": "approve",
+   "request": "s8",
+   "expect": "error:approval_denied",
+   "why": "An HR manager is not a finance approver."
+  },
+  {
+   "id": "s11",
+   "actor": "approver",
+   "op": "approve",
+   "request": "s8",
+   "expect": "ok",
+   "why": "A finance approver releases the payroll run."
+  },
+  {
+   "id": "s12",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}",
+   "attrs": {
+    "kind": "payroll"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 2500000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The payroll payment is posted."
+  },
+  {
+   "id": "s13",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "payroll"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "The payroll role covers payroll payments only."
+  },
+  {
+   "id": "s14",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}-po",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "uma",
+    "approved_by": "wendy"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "A purchase-order payment under the payroll role is refused."
+  },
+  {
+   "id": "s15",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}-big",
+   "attrs": {
+    "kind": "payroll"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 30000001
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:budget_exceeded",
+   "why": "More than the 300,000.00 payroll budget of the task."
+  },
+  {
+   "id": "s16",
+   "actor": "clerk",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "ap-clerk",
+   "task": "pay-{n}",
+   "save": "ap_task",
+   "expect": "ok",
+   "why": "An accounts payable clerk lends the finance orchestrator the ap-clerk role."
+  },
+  {
+   "id": "s17",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "ap_task",
+   "action": "create",
+   "resource": "finance.payment/payroll-{n}-ap",
+   "attrs": {
+    "kind": "payroll",
+    "requested_by": "uma",
+    "approved_by": "wendy"
+   },
+   "context": {
+    "spend": {
+     "currency": "{payroll.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "Accounts payable does not raise payroll payments."
+  },
+  {
+   "id": "s18",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "ap_task",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Nor read salaries."
+  }
+ ]
+}

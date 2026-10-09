@@ -1,0 +1,226 @@
+{
+  "roles": {
+    "support-agent": {
+      "description": "Front-line support: customers, tickets, refunds up to 200.00 in total per task.",
+      "members": [{"type": "Group", "id": "support"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["crm.customer/*", "crm.ticket/*", "billing.refund/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"],
+        "budget": {"EUR": 20000, "USD": 20000}
+      },
+      "max_ttl": 900,
+      "tasks": ["ticket-*"],
+      "agents": ["support-orchestrator"]
+    },
+    "support-supervisor": {
+      "description": "The same work as support-agent with a refund budget of 1,000.00 per task.",
+      "members": [{"type": "Group", "id": "support-supervisors"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["crm.customer/*", "crm.ticket/*", "billing.refund/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"],
+        "budget": {"EUR": 100000, "USD": 100000}
+      },
+      "max_ttl": 900,
+      "tasks": ["ticket-*"],
+      "agents": ["support-orchestrator"]
+    },
+    "ap-clerk": {
+      "description": "Accounts payable: match invoices, pay purchase orders and refunds, up to 5,000.00 in total per task.",
+      "members": [{"type": "Group", "id": "finance-clerks"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["billing.invoice/*", "billing.refund/*", "finance.payment/*", "procurement.po/*", "procurement.vendor/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"],
+        "budget": {"EUR": 500000, "USD": 500000}
+      },
+      "max_ttl": 900,
+      "tasks": ["pay-*", "invoice-*", "refund-*"],
+      "agents": ["finance-orchestrator"]
+    },
+    "ap-manager": {
+      "description": "The same work as ap-clerk with a payment budget of 50,000.00 per task.",
+      "members": [{"type": "Group", "id": "finance-managers"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["billing.invoice/*", "billing.refund/*", "finance.payment/*", "procurement.po/*", "procurement.vendor/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"],
+        "budget": {"EUR": 5000000, "USD": 5000000}
+      },
+      "max_ttl": 900,
+      "tasks": ["pay-*", "invoice-*", "refund-*"],
+      "agents": ["finance-orchestrator"]
+    },
+    "controller": {
+      "description": "Month-end: post and approve journal entries, close the period.",
+      "members": [{"type": "Group", "id": "finance-managers"}],
+      "cap": {
+        "actions": ["read", "create", "approve", "close"],
+        "resources": ["finance.ledger/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["close-*"],
+      "agents": ["finance-orchestrator"]
+    },
+    "treasury": {
+      "description": "Bank details: the only role that sees or changes account numbers.",
+      "members": [{"type": "Group", "id": "treasury"}],
+      "cap": {
+        "actions": ["read", "update"],
+        "resources": ["procurement.vendor/*", "finance.payment/*", "billing.invoice/*"],
+        "deny_labels": ["card", "salary", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 600,
+      "tasks": ["treasury-*", "vendor-*"],
+      "agents": ["finance-orchestrator"]
+    },
+    "payroll-officer": {
+      "description": "Payroll: read employees and salaries, raise payroll payments up to 300,000.00 per task.",
+      "members": [{"type": "Group", "id": "payroll"}],
+      "cap": {
+        "actions": ["read", "create"],
+        "resources": ["hr.employee/*", "hr.salary/*", "finance.payment/payroll-*"],
+        "deny_labels": ["secret", "card", "bank", "hr-confidential", "pricing"],
+        "deny_fields": ["hr.employee.home_address"],
+        "budget": {"EUR": 30000000, "USD": 30000000}
+      },
+      "max_ttl": 900,
+      "tasks": ["payroll-*", "onboard-*"],
+      "agents": ["finance-orchestrator"]
+    },
+    "hr-partner": {
+      "description": "HR: employee records and reviews, raise access requests for new hires. No salary figures.",
+      "members": [{"type": "Group", "id": "hr"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["hr.employee/*", "hr.review/*", "it.access_request/*"],
+        "deny_labels": ["salary", "card", "bank", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["onboard-*", "offboard-*", "review-*"],
+      "agents": ["hr-orchestrator"]
+    },
+    "hr-manager": {
+      "description": "HR management: everything an HR partner does, plus salaries.",
+      "members": [{"type": "Group", "id": "hr-managers"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["hr.employee/*", "hr.review/*", "hr.salary/*", "it.access_request/*"],
+        "deny_labels": ["card", "bank", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["onboard-*", "offboard-*", "review-*", "salary-*", "payroll-*"],
+      "agents": ["hr-orchestrator"]
+    },
+    "sales-rep": {
+      "description": "Sales: opportunities, contracts and customers of the rep's own region.",
+      "members": [{"type": "Group", "id": "sales"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["sales.opportunity/*", "sales.contract/*", "crm.customer/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential"]
+      },
+      "max_ttl": 900,
+      "tasks": ["deal-*", "contract-*"],
+      "agents": ["sales-orchestrator"]
+    },
+    "sales-manager": {
+      "description": "Sales management: as sales-rep, plus discount approval and the margin field.",
+      "members": [{"type": "Group", "id": "sales-managers"}],
+      "cap": {
+        "actions": ["read", "create", "update", "approve"],
+        "resources": ["sales.opportunity/*", "sales.contract/*", "crm.customer/*"],
+        "deny_labels": ["card", "bank", "salary", "hr-confidential"]
+      },
+      "max_ttl": 900,
+      "tasks": ["deal-*", "contract-*"],
+      "agents": ["sales-orchestrator"]
+    },
+    "buyer": {
+      "description": "Procurement: raise and maintain purchase orders, onboard vendors.",
+      "members": [{"type": "Group", "id": "procurement"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["procurement.po/*", "procurement.vendor/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["po-*", "vendor-*"],
+      "agents": ["procurement-orchestrator"]
+    },
+    "po-approver": {
+      "description": "Procurement management: approve purchase orders and activate vendors raised by someone else.",
+      "members": [{"type": "Group", "id": "procurement-approvers"}],
+      "cap": {
+        "actions": ["read", "approve"],
+        "resources": ["procurement.po/*", "procurement.vendor/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["po-*", "vendor-*"],
+      "agents": ["procurement-orchestrator"]
+    },
+    "requisitioner": {
+      "description": "Any employee: raise a purchase requisition and read it back.",
+      "members": [{"type": "Group", "id": "employees"}],
+      "cap": {
+        "actions": ["read", "create"],
+        "resources": ["procurement.po/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "hr-confidential", "pricing", "internal"]
+      },
+      "max_ttl": 600,
+      "tasks": ["req-*"],
+      "agents": ["procurement-orchestrator"]
+    },
+    "it-operator": {
+      "description": "IT operations: accounts and access requests; the basic employee fields needed to provision.",
+      "members": [{"type": "Group", "id": "it-ops"}],
+      "cap": {
+        "actions": ["read", "create", "update", "disable", "grant", "reset_password"],
+        "resources": ["it.account/*", "it.access_request/*", "hr.employee/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "financial", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 900,
+      "tasks": ["onboard-*", "offboard-*", "access-*", "it-*"],
+      "agents": ["it-orchestrator"]
+    },
+    "access-approver": {
+      "description": "Any people manager: approve an access request raised by someone else.",
+      "members": [{"type": "Group", "id": "managers"}],
+      "cap": {
+        "actions": ["read", "approve"],
+        "resources": ["it.access_request/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "financial", "hr-confidential", "pricing"]
+      },
+      "max_ttl": 600,
+      "tasks": ["access-*"],
+      "agents": ["it-orchestrator"]
+    },
+    "auditor": {
+      "description": "Compliance: read everything, change nothing, never see card numbers, bank accounts or other secrets.",
+      "members": [{"type": "Group", "id": "compliance"}],
+      "cap": {
+        "actions": ["read"],
+        "resources": ["*"],
+        "deny_labels": ["secret", "card", "bank"]
+      },
+      "max_ttl": 1800,
+      "tasks": ["audit-*"],
+      "agents": ["compliance-orchestrator"]
+    },
+    "break-glass": {
+      "description": "One named person, during an incident, for five minutes: accounts and customer contact data.",
+      "members": [{"type": "User", "id": "bruno"}],
+      "cap": {
+        "actions": ["read", "update", "disable"],
+        "resources": ["it.account/*", "crm.customer/*"],
+        "deny_labels": ["secret", "card", "bank", "salary", "financial", "hr-confidential", "pricing", "internal"]
+      },
+      "max_ttl": 300,
+      "tasks": ["incident-*"],
+      "agents": ["incident-responder"]
+    }
+  }
+}

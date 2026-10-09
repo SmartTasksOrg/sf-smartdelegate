@@ -1,0 +1,848 @@
+{
+ "suite": "03_fields",
+ "cases": [
+  {
+   "name": "field decisions are default deny and come back as an obligation",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "obligations": {
+       "fields": {
+        "allow": [
+         "addresses",
+         "card.last4",
+         "email",
+         "id",
+         "name",
+         "phone",
+         "region",
+         "tier"
+        ],
+        "deny": [
+         "addresses[].geo",
+         "card.number",
+         "notes",
+         "ssn"
+        ],
+        "redact": [
+         "card.number"
+        ]
+       },
+       "row_filter": [
+        {
+         "column": "region",
+         "op": "eq",
+         "value": "EU"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "filter masks nested objects, arrays and unlisted fields",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada",
+       "email": "ada@example.com",
+       "ssn": "123-45-6789",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "vip",
+       "shoe_size": 42,
+       "addresses": [
+        {
+         "street": "1 Main St",
+         "zip": "1000",
+         "geo": {
+          "lat": 50,
+          "lng": 4
+         }
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4242424242424242",
+        "exp": "12/30"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "name": "Ada",
+       "email": "ada@example.com",
+       "region": "EU",
+       "tier": "gold",
+       "addresses": [
+        {
+         "street": "1 Main St",
+         "zip": "1000"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "[REDACTED]"
+       }
+      },
+      "masked": [
+       "addresses[].geo",
+       "card.exp",
+       "card.number",
+       "notes",
+       "shoe_size",
+       "ssn"
+      ],
+      "rows_dropped": 0
+     }
+    }
+   ]
+  },
+  {
+   "name": "row filter comes from the user's own attributes",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "any"
+      },
+      "data": [
+       {
+        "id": "c-1",
+        "region": "EU",
+        "ssn": "1"
+       },
+       {
+        "id": "c-2",
+        "region": "US",
+        "ssn": "2"
+       },
+       {
+        "id": "c-3",
+        "region": "EU"
+       },
+       {
+        "id": "c-4"
+       }
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": [
+       {
+        "id": "c-1",
+        "region": "EU"
+       },
+       {
+        "id": "c-3",
+        "region": "EU"
+       }
+      ],
+      "rows_dropped": 2
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-2"
+      },
+      "data": {
+       "id": "c-2",
+       "region": "US",
+       "name": "Bo"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": null,
+      "rows_dropped": 1
+     }
+    }
+   ]
+  },
+  {
+   "name": "a compliance user sees secret fields, but only through the first agent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "hr.salary/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789",
+       "notes": "vip",
+       "region": "EU",
+       "card": {
+        "number": "4242424242424242"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789",
+       "notes": "vip",
+       "region": "EU",
+       "card": {
+        "number": "4242424242424242"
+       }
+      },
+      "masked": [],
+      "rows_dropped": 0
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "hr.salary/*"
+       ]
+      },
+      "ttl": 300
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789",
+       "notes": "vip",
+       "region": "EU",
+       "card": {
+        "number": "4242424242424242"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "principal": {
+       "user": "carol",
+       "chain": [
+        "support-bot",
+        "summarizer"
+       ]
+      },
+      "data": {
+       "id": "c-1",
+       "notes": "vip",
+       "region": "EU",
+       "card": {
+        "number": "[REDACTED]"
+       }
+      },
+      "masked": [
+       "card.number",
+       "ssn"
+      ],
+      "obligations": {
+       "fields": {
+        "deny": [
+         "card.number",
+         "ssn"
+        ],
+        "redact": [
+         "card.number"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a token's deny lists beat policy",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "carol",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "hr.salary/*"
+       ],
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "ssn": "123-45-6789",
+       "notes": "vip",
+       "email": "a@b.c"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "email": "a@b.c"
+      },
+      "masked": [
+       "notes",
+       "ssn"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "the caller may ask about a subset of fields; unknown fields deny",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000,
+      "fields": [
+       "email",
+       "ssn"
+      ]
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "obligations": {
+       "fields": {
+        "allow": [
+         "email"
+        ],
+        "deny": [
+         "ssn"
+        ],
+        "redact": []
+       }
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000,
+      "fields": [
+       "email",
+       "blood_type"
+      ]
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "unknown_field"
+     }
+    }
+   ]
+  },
+  {
+   "name": "strict mode rejects tool input that carries a field the agent may not write",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "email": "new@example.com",
+       "phone": "+32 2 555 0100"
+      },
+      "now": 1700000000,
+      "strict": true
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "email": "new@example.com",
+       "phone": "+32 2 555 0100"
+      }
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "email": "new@example.com",
+       "tier": "platinum"
+      },
+      "now": 1700000000,
+      "strict": true
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "field_denied",
+      "data": null
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "email": "new@example.com",
+       "tier": "platinum"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": {
+       "email": "new@example.com"
+      },
+      "masked": [
+       "tier"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "data that is not a record cannot be authorised",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": "raw text with an ssn 123-45-6789",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": null,
+      "rows_dropped": 1
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": [
+       {
+        "id": "c-1",
+        "region": "EU"
+       },
+       "loose string",
+       7
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "data": [
+       {
+        "id": "c-1",
+        "region": "EU"
+       }
+      ],
+      "rows_dropped": 2
+     }
+    }
+   ]
+  },
+  {
+   "name": "a denied request returns no data",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-9"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada",
+       "email": "ada@example.com",
+       "ssn": "123-45-6789",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "vip",
+       "shoe_size": 42,
+       "addresses": [
+        {
+         "street": "1 Main St",
+         "zip": "1000",
+         "geo": {
+          "lat": 50,
+          "lng": 4
+         }
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4242424242424242",
+        "exp": "12/30"
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_resource",
+      "data": null
+     }
+    }
+   ]
+  }
+ ]
+}

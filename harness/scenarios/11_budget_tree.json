@@ -1,0 +1,379 @@
+{
+ "id": "11_budget_tree",
+ "name": "Budget across a delegation tree",
+ "description": "A support orchestrator with a 200.00 task budget starts three sub-agents with 100.00 each and lets them refund at the same time. Each stays within its own 100.00, and together they never spend more than the parent's 200.00.",
+ "units": [
+  "support"
+ ],
+ "cast": {
+  "agent": {
+   "group": "support",
+   "not_group": "support-supervisors"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "agent",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}",
+   "save": "task",
+   "expect": "ok",
+   "why": "A support agent lends the orchestrator the support-agent role: 200.00 for this ticket."
+  },
+  {
+   "id": "s2",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{agent.currency}": 10000
+    }
+   },
+   "save": "worker_a",
+   "expect": "ok",
+   "why": "First sub-agent, 100.00."
+  },
+  {
+   "id": "s3",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{agent.currency}": 10000
+    }
+   },
+   "save": "worker_b",
+   "expect": "ok",
+   "why": "Second sub-agent, 100.00."
+  },
+  {
+   "id": "s4",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "ticket-triager",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{agent.currency}": 10000
+    }
+   },
+   "save": "worker_c",
+   "expect": "ok",
+   "why": "Third sub-agent, 100.00. The three budgets add up to 300.00, more than the parent has; each is within the parent's, which is all narrowing asks."
+  },
+  {
+   "id": "s5",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{agent.currency}": 20001
+    }
+   },
+   "save": null,
+   "expect": "error:widening",
+   "why": "A sub-agent cannot be given more than the parent has."
+  },
+  {
+   "id": "s6",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "worker_a",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-ask",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 5000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "dry_run": true,
+   "expect": "allow",
+   "why": "Asking whether a 50.00 refund would be allowed (a dry run) costs nothing and leaves no audit record."
+  },
+  {
+   "id": "s7",
+   "actor": "several agents at once",
+   "op": "parallel",
+   "steps": [
+    {
+     "id": "s7.1",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_a",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-a1",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.2",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_a",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-a2",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.3",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_a",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-a3",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.4",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_b",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-b1",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.5",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_b",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-b2",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.6",
+     "actor": "refund-worker",
+     "op": "call",
+     "token": "worker_b",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-b3",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.7",
+     "actor": "ticket-triager",
+     "op": "call",
+     "token": "worker_c",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-c1",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.8",
+     "actor": "ticket-triager",
+     "op": "call",
+     "token": "worker_c",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-c2",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    },
+    {
+     "id": "s7.9",
+     "actor": "ticket-triager",
+     "op": "call",
+     "token": "worker_c",
+     "action": "create",
+     "resource": "billing.refund/rf-{n}-c3",
+     "attrs": {
+      "region": "{agent.region}"
+     },
+     "context": {
+      "spend": {
+       "currency": "{agent.currency}",
+       "amount": 4000
+      }
+     },
+     "why": "A 40.00 refund, at the same time as eight others."
+    }
+   ],
+   "expect": {
+    "allow": 5,
+    "rest": "deny:budget_exceeded"
+   },
+   "why": "Nine refunds of 40.00 at once, three per sub-agent. Each sub-agent can afford two (80.00 of its 100.00); the parent can afford five in total (200.00). Exactly five go through."
+  },
+  {
+   "id": "s8",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-p",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{agent.currency}",
+     "amount": 1000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:budget_exceeded",
+   "why": "The parent's budget is spent by its sub-agents: the orchestrator itself has nothing left."
+  },
+  {
+   "id": "s9",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "worker_a",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-z",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "GBP",
+     "amount": 100
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:budget_exceeded",
+   "why": "A sub-agent has no budget in a currency it was not given."
+  },
+  {
+   "id": "s10",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "worker_a",
+   "action": "read",
+   "resource": "billing.refund/rf-{n}-a1",
+   "attrs": {
+    "region": "{agent.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "rf-{n}-a1",
+    "region": "{agent.region}",
+    "amount": 4000,
+    "currency": "{agent.currency}",
+    "status": "requested"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount"
+    ]
+   },
+   "why": "Reading costs nothing and still works."
+  }
+ ]
+}

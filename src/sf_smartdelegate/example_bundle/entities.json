@@ -1,0 +1,15 @@
+[
+  {"uid": {"type": "Group", "id": "support"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "Group", "id": "supervisors"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "Group", "id": "compliance"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "User", "id": "alice"}, "attrs": {"region": "EU"}, "parents": [{"type": "Group", "id": "support"}]},
+  {"uid": {"type": "User", "id": "bob"}, "attrs": {"region": "EU"}, "parents": [{"type": "Group", "id": "support"}, {"type": "Group", "id": "supervisors"}]},
+  {"uid": {"type": "User", "id": "carol"}, "attrs": {"region": "US"}, "parents": [{"type": "Group", "id": "compliance"}]},
+  {"uid": {"type": "User", "id": "erin"}, "attrs": {}, "parents": [{"type": "Group", "id": "support"}]},
+  {"uid": {"type": "User", "id": "dave"}, "attrs": {"region": "US"}, "parents": []},
+  {"uid": {"type": "AgentGroup", "id": "support-agents"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "Agent", "id": "support-bot"}, "attrs": {}, "parents": [{"type": "AgentGroup", "id": "support-agents"}]},
+  {"uid": {"type": "Agent", "id": "refund-helper"}, "attrs": {}, "parents": [{"type": "AgentGroup", "id": "support-agents"}]},
+  {"uid": {"type": "Agent", "id": "summarizer"}, "attrs": {}, "parents": [{"type": "AgentGroup", "id": "support-agents"}]},
+  {"uid": {"type": "Agent", "id": "rogue-bot"}, "attrs": {}, "parents": []}
+]

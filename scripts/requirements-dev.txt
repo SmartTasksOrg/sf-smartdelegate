@@ -1,0 +1,6 @@
+# Optional extras the bootstrap installs into .venv after the package itself.
+# Nothing here is needed to run SmartDelegate; a failure to install them is
+# reported as SKIPPED and the bootstrap goes on.
+build>=1.0            # `python -m build` for the sdist and the wheel (make dist)
+psycopg2-binary>=2.9  # tests/test_guard_sql.py against a real PostgreSQL (SMARTDELEGATE_PG_DSN), and the live upstream suite
+PyYAML>=6.0           # live/boundary/test_boundary.py parses its deployment files (Compose, NetworkPolicy)

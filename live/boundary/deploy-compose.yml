@@ -1,0 +1,77 @@
+# UNTESTED deployment artifact — syntactically checked here, never run here.
+#
+# The same topology as live/boundary expressed for Docker Compose: the agent
+# container sits on a network marked `internal: true`, so Docker gives it no
+# route off that network — it can reach the SmartDelegate proxy and nothing
+# else. The proxy sits on both that internal network and an egress network
+# that reaches the upstream and the database; it holds the upstream
+# credential. The agent holds only its capability token.
+#
+# What this does NOT prove (see live/README.md): it has not been run; a
+# Compose `internal` network is Docker's bridge driver on one host, not a
+# cloud VPC; image contents, secret delivery and the host's own firewall are
+# out of scope.
+#
+#   docker compose -f deploy-compose.yml config   # validates without starting
+#   docker compose -f deploy-compose.yml up        # (elsewhere; not in this harness)
+
+services:
+  postgres:
+    image: postgres:16
+    networks: [backend]
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
+      POSTGRES_DB: kestrel_live
+    secrets: [pg_password]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  company-api:
+    image: kestrel/company-api:0.3.0
+    networks: [backend]
+    environment:
+      COMPANY_API_DSN_FILE: /run/secrets/api_dsn      # holds the DB credential
+      COMPANY_API_KEY_FILE: /run/secrets/api_key       # the upstream key the agent never gets
+    secrets: [api_dsn, api_key]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  proxy:
+    image: smartdelegate:0.3.0
+    command: ["http-proxy", "--routes", "/etc/smartdelegate/routes.json", "--listen", "0.0.0.0:8182"]
+    # on the internal network (reached by the agent) AND the backend (reaches the upstream)
+    networks: [agentnet, backend]
+    environment:
+      COMPANY_API_KEY_FILE: /run/secrets/api_key       # the credential lives only here
+    secrets: [api_key]
+    configs:
+      - {source: routes, target: /etc/smartdelegate/routes.json}
+    depends_on: [company-api]
+
+  agent:
+    image: kestrel/agent:0.3.0
+    # ONLY the internal network: no default route, no DNS off it, no egress.
+    # Its sole reachable service is http://proxy:8182.
+    networks: [agentnet]
+    environment:
+      SMARTDELEGATE_PROXY: http://proxy:8182
+      # a capability token is injected per task by the orchestrator; no upstream key, no DB credential
+    depends_on: [proxy]
+
+networks:
+  agentnet:
+    internal: true        # the kernel/bridge gives containers on this network no way out
+  backend:
+    internal: true
+
+secrets:
+  pg_password: {file: ./secrets/pg_password}
+  api_dsn: {file: ./secrets/api_dsn}
+  api_key: {file: ./secrets/api_key}
+
+configs:
+  routes:
+    file: ../upstream/routes.json

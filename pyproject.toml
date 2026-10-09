@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sf-smartdelegate"
+version = "0.3.0"
+description = "Delegate, don't hand over the keys. An agent never holds more than the human's role for the task: IAM for LLM agents."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "SmartTasks Lab" }]
+keywords = ["smart", "ai", "iaiso", "sf-smartdelegate", "iam", "agents", "authorization", "delegation", "cedar", "mcp"]
+dependencies = ["cryptography>=41"]
+license-files = ["LICENSE", "NOTICE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://smarttasks.cloud"
+Source = "https://github.com/SmartTasksOrg/sf-smartdelegate"
+Issues = "https://github.com/SmartTasksOrg/sf-smartdelegate/issues"
+Security = "https://github.com/SmartTasksOrg/sf-smartdelegate/security/policy"
+Changelog = "https://github.com/SmartTasksOrg/sf-smartdelegate/blob/master/CHANGELOG.md"
+Standard = "https://iaiso.org"
+
+[project.scripts]
+sf-smartdelegate = "sf_smartdelegate.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sf_smartdelegate = ["example_bundle/**/*"]

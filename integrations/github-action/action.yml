@@ -1,0 +1,52 @@
+name: "SmartDelegate policy check"
+description: "Load a SmartDelegate policy bundle, fail when policies.json is stale relative to the .cedar sources, run the bundle's policy tests, and optionally verify the bundle signature."
+branding:
+  icon: shield
+  color: gray-dark
+inputs:
+  bundle:
+    description: "Path of the bundle directory (the one that holds policies.json)"
+    required: true
+  public-key:
+    description: "Base64 Ed25519 public key (the content of a .pub file written by `sf-smartdelegate bundle keygen`). When set, the bundle must carry a valid bundle.sig.json signed by that key."
+    required: false
+    default: ""
+  package:
+    description: "The requirement pip installs, for example sf-smartdelegate==0.3.0, or a path (.) when the workflow runs inside a checkout of this repository"
+    required: false
+    default: "sf-smartdelegate"
+  python-version:
+    description: "Python version for actions/setup-python (3.10 or later)"
+    required: false
+    default: "3.12"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install SmartDelegate
+      shell: bash
+      env:
+        SMARTDELEGATE_PACKAGE: ${{ inputs.package }}
+      run: python -m pip install --quiet "$SMARTDELEGATE_PACKAGE"
+    - name: Policy check (the bundle loads and policies.json matches the .cedar sources)
+      shell: bash
+      env:
+        SMARTDELEGATE_BUNDLE: ${{ inputs.bundle }}
+      run: sf-smartdelegate policy check --bundle "$SMARTDELEGATE_BUNDLE"
+    - name: Policy tests (the bundle's tests/*.json)
+      shell: bash
+      env:
+        SMARTDELEGATE_BUNDLE: ${{ inputs.bundle }}
+      run: sf-smartdelegate policy test --bundle "$SMARTDELEGATE_BUNDLE"
+    - name: Bundle signature
+      if: ${{ inputs.public-key != '' }}
+      shell: bash
+      env:
+        SMARTDELEGATE_BUNDLE: ${{ inputs.bundle }}
+        SMARTDELEGATE_PUBLIC_KEY: ${{ inputs.public-key }}
+      run: |
+        config="$(mktemp)"
+        python -c 'import json, os, sys; json.dump({"bundle_public_key": os.environ["SMARTDELEGATE_PUBLIC_KEY"].strip()}, open(sys.argv[1], "w"))' "$config"
+        sf-smartdelegate policy check --config "$config" --bundle "$SMARTDELEGATE_BUNDLE"

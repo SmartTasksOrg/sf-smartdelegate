@@ -1,0 +1,9 @@
+# built binaries and test output
+/smartdelegate-go
+/smartdelegate-go.exe
+/cmd/smartdelegate-go/smartdelegate-go
+/cmd/smartdelegate-go/smartdelegate-go.exe
+*.test
+*.out
+/bin/
+/dist/

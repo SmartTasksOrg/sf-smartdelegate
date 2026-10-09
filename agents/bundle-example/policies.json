@@ -1,0 +1,282 @@
+{
+  "format": "cedar-json/1",
+  "sources": {
+    "policies/ops.cedar": "0b58f020b7761332a6651ba1fcec14793b79307f31e3ee21a16bc56d547a533a"
+  },
+  "policies": {
+    "ops-agent-roles-never-operate": {
+      "effect": "forbid",
+      "principal": {
+        "op": "All"
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "operate"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "SmartDelegateOps"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "||": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "role"
+                    }
+                  },
+                  "right": {
+                    "Value": "sd-operator"
+                  }
+                }
+              },
+              "right": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "role"
+                    }
+                  },
+                  "right": {
+                    "Value": "sd-integrator"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "ops-agent-roles-never-operate"
+      }
+    },
+    "ops-delegate-integrator": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "Group",
+          "id": "sd-integrators"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "smartdelegate-integrator"
+        }
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "ops-delegate-integrator"
+      }
+    },
+    "ops-delegate-operator": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "Group",
+          "id": "sd-operators"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "smartdelegate-operator"
+        }
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "ops-delegate-operator"
+      }
+    },
+    "ops-integrator-reads-status": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "smartdelegate-integrator"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "SmartDelegateOps",
+          "id": "status"
+        }
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "role"
+                    }
+                  },
+                  "right": {
+                    "Value": "sd-integrator"
+                  }
+                }
+              },
+              "right": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "depth"
+                    }
+                  },
+                  "right": {
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "ops-integrator-reads-status"
+      }
+    },
+    "ops-operator-reads-monitoring": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "smartdelegate-operator"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "SmartDelegateOps"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "role"
+                    }
+                  },
+                  "right": {
+                    "Value": "sd-operator"
+                  }
+                }
+              },
+              "right": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "depth"
+                    }
+                  },
+                  "right": {
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "ops-operator-reads-monitoring"
+      }
+    }
+  }
+}

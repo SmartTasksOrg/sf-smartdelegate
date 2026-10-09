@@ -1,0 +1,846 @@
+{
+ "about": "Finance: payments, separation of duties, bank details, the ledger, payroll.",
+ "cases": [
+  {
+   "name": "accounts payable pays an approved purchase order of 1,000.00 without further approval",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "gina",
+      "agent": "finance-orchestrator",
+      "role": "ap-clerk",
+      "task": "pay-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-1",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100000
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "ap-pay-small"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "above 1,000.00 a finance approver must release the payment",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "gina",
+      "agent": "finance-orchestrator",
+      "role": "ap-clerk",
+      "task": "pay-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-2",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 100001
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "payment-over-1000"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a payment that does not say who requested and who approved is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-3",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-3",
+       "attrs": {
+        "kind": "po"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the requester of the money does not pay it",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-4",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "gina",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-payer-is-not-requester"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "the approver of the money does not pay it",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-5",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "gina"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-payer-is-not-approver"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a payment approved by its own requester is not paid",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-6",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "uma"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-payment-needs-independent-approval"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "accounts payable does not see vendor bank details or the tax id",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "id": "v-1",
+       "name": "Acme Tooling",
+       "region": "EU",
+       "status": "active",
+       "contact_email": "ap@acme.example",
+       "tax_id": "DE123",
+       "risk_score": 2,
+       "bank": {
+        "iban": "DE89370400440532013000",
+        "bic": "COBADEFF"
+       },
+       "onboarded_by": "uma"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "bank.bic",
+       "bank.iban",
+       "tax_id"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "treasury sees vendor bank details and may change them, and nothing else",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "karin",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "treasury",
+       "task": "treasury-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "id": "v-1",
+       "name": "Acme Tooling",
+       "region": "EU",
+       "status": "active",
+       "contact_email": "ap@acme.example",
+       "tax_id": "DE123",
+       "risk_score": 2,
+       "bank": {
+        "iban": "DE89370400440532013000",
+        "bic": "COBADEFF"
+       },
+       "onboarded_by": "uma"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [],
+      "data": {
+       "bank": {
+        "iban": "DE89370400440532013000",
+        "bic": "COBADEFF"
+       }
+      }
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "karin",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "treasury",
+       "task": "treasury-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "bank": {
+        "iban": "DE00",
+        "bic": "X"
+       }
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "karin",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "treasury",
+       "task": "treasury-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "name": "Other"
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "field_denied"
+     }
+    }
+   ]
+  },
+  {
+   "name": "accounts payable cannot change vendor bank details",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "update",
+      "resource": {
+       "path": "procurement.vendor",
+       "id": "v-1"
+      },
+      "data": {
+       "bank": {
+        "iban": "DE00"
+       }
+      },
+      "strict": true
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a journal entry is posted to an open period only",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "jonas",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "je-1",
+       "attrs": {
+        "period_open": true
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "jonas",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "je-1",
+       "attrs": {
+        "period_open": false
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "jonas",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "je-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "whoever posted a journal entry does not approve it; a second controller does",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "jonas",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "je-1",
+       "attrs": {
+        "posted_by": "jonas"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-entry-approver-is-not-poster"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "ines",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "je-1",
+       "attrs": {
+        "posted_by": "jonas"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    }
+   ]
+  },
+  {
+   "name": "closing a period waits for a finance approver",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "jonas",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "controller",
+       "task": "close-1"
+      },
+      "action": "close",
+      "resource": {
+       "path": "finance.ledger",
+       "id": "period-2026-09"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "period-close"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "payroll reads salaries but not review notes; a payroll payment waits for a finance approver",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "liam",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "payroll-officer",
+       "task": "payroll-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "emp-1"
+      },
+      "data": {
+       "employee_id": "emp-1",
+       "currency": "EUR",
+       "grade": "L3",
+       "base": 520000,
+       "bonus": 0,
+       "notes": "retention risk"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "notes"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "liam",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "payroll-officer",
+       "task": "payroll-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.review",
+       "id": "emp-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "liam",
+      "agent": "finance-orchestrator",
+      "role": "payroll-officer",
+      "task": "payroll-1"
+     },
+     "save": {
+      "t": "token"
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "payroll-2026-09",
+       "attrs": {
+        "kind": "payroll"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 2000000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "payroll-run"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "payroll does not raise purchase-order payments, accounts payable does not raise payroll payments",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "liam",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "payroll-officer",
+       "task": "payroll-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "payroll-x",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-7",
+       "attrs": {
+        "kind": "payroll",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the invoice matcher (a sub-agent) cannot create a payment",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "gina",
+       "agents": [
+        "finance-orchestrator",
+        "invoice-matcher"
+       ],
+       "role": "ap-clerk",
+       "task": "pay-1"
+      },
+      "action": "create",
+      "resource": {
+       "path": "finance.payment",
+       "id": "pay-8",
+       "attrs": {
+        "kind": "po",
+        "requested_by": "uma",
+        "approved_by": "wendy"
+       }
+      },
+      "context": {
+       "spend": {
+        "currency": "EUR",
+        "amount": 5000
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  }
+ ]
+}

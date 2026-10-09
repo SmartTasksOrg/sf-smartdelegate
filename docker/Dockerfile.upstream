@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+#
+# UNTESTED: this file was written on a machine without a Docker daemon. It has
+# never been built. See docs/BUILD.md, "Docker".
+#
+# The fixtures of the live topology that are plain Python: the upstream
+# (live/upstream/company_api.py, a REST service with its own API key on top of
+# the Kestrel Works PostgreSQL database), its seeding (live/upstream/seed.py)
+# and the identity-provider set-up (docker/idp_init.py, which uses
+# live/idp/provision.py). Used by the `db-seed`, `company-api` and `idp-init`
+# services of docker/docker-compose.yml.
+#
+#   docker build -f docker/Dockerfile.upstream -t smartdelegate-upstream:0.3.0 .   (context: the repository root)
+
+FROM python:3.12-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/opt/smartdelegate/src:/opt/smartdelegate
+RUN pip install --no-cache-dir "psycopg2-binary>=2.9" "cryptography>=41" \
+ && groupadd --gid 10002 upstream \
+ && useradd --uid 10002 --gid 10002 --create-home --shell /usr/sbin/nologin upstream \
+ && mkdir -p /idp-config /idp-work && chown 10002:10002 /idp-config /idp-work && chmod 755 /idp-config && chmod 700 /idp-work
+WORKDIR /opt/smartdelegate
+# seed.py and provision.py read the people and groups of examples/company; src/ is there for what live/ imports from the package
+COPY src ./src
+COPY examples/company ./examples/company
+COPY live ./live
+COPY docker/idp_init.py docker/compose-daemon.json ./docker/
+USER 10002:10002
+EXPOSE 9100
+# company_api.py: host and port from COMPANY_API_HOST / COMPANY_API_PORT, or one `[host:]port` argument;
+# the key and the DSN from COMPANY_API_KEY / COMPANY_API_DSN or the files COMPANY_API_KEY_FILE / COMPANY_API_DSN_FILE name
+ENV COMPANY_API_HOST=0.0.0.0 COMPANY_API_PORT=9100
+HEALTHCHECK --interval=10s --timeout=4s --start-period=10s --retries=6 \
+  CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9100/healthz', timeout=3).status == 200 else 1)"]
+CMD ["python", "-m", "live.upstream.company_api"]

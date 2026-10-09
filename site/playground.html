@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartDelegate playground</title>
+<meta name="description" content="Try the smartdelegate delegation rules: who holds a role, what a token issued under it can carry, and what a sub-agent can be handed.">
+<style>
+:root {
+  color-scheme: light dark;
+  --paper: #eef1f6; --sheet: #ffffff; --ink: #14213d; --muted: #56627a; --rule: #c5cde0;
+  --form: #2743a6; --form-soft: #e6ebfa;
+  --grant: #0f6b4f; --grant-bg: #e2f3ec; --refuse: #a8261c; --refuse-bg: #fbe9e6;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f1420; --sheet: #171d2c; --ink: #e6eaf4; --muted: #9aa5bd; --rule: #2e3850;
+    --form: #9db1ff; --form-soft: #212b47;
+    --grant: #62d6ab; --grant-bg: #12352a; --refuse: #ff978c; --refuse-bg: #3d1b18;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans); }
+.page { max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; }
+h1 { font-size: clamp(1.7rem, 4.2vw, 2.5rem); line-height: 1.1; margin: 0 0 10px; font-weight: 750; letter-spacing: -0.02em; }
+h2 { font-size: 1.25rem; line-height: 1.2; margin: 0 0 4px; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 0.95rem; margin: 0 0 6px; font-weight: 650; }
+p { margin: 0 0 12px; }
+.lede { max-width: 62ch; color: var(--muted); }
+.note { max-width: 78ch; margin: 14px 0 0; padding: 10px 14px; border-left: 4px solid var(--form); background: var(--form-soft); font-size: 0.94rem; }
+code, .lit { font-family: var(--mono); font-size: 0.9em; }
+.note code { white-space: nowrap; }
+
+.step { margin-top: 34px; }
+.step > header { margin-bottom: 14px; }
+.step > header p { color: var(--muted); margin: 0; max-width: 70ch; }
+.cols { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 940px) {
+  .cols { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: 26px; }
+  .cols > .out { position: sticky; top: 14px; }
+}
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; }
+fieldset { border: 0; margin: 0 0 18px; padding: 0; min-width: 0; }
+fieldset:last-child { margin-bottom: 0; }
+legend, .label { display: block; padding: 0; margin: 0 0 6px; font-weight: 650; font-size: 0.95rem; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 4px 0 0; }
+
+.choices { display: grid; gap: 6px; }
+.choices.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice { position: relative; display: block; }
+.choice input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.choice span { display: block; border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; line-height: 1.3; }
+.choice b { display: block; font-weight: 650; }
+.choice small { display: block; color: var(--muted); font-size: 0.82rem; overflow-wrap: anywhere; }
+.choice input:checked + span { border-color: var(--form); background: var(--form-soft); box-shadow: inset 3px 0 0 var(--form); }
+.choice input:focus-visible + span { outline: 2px solid var(--form); outline-offset: 2px; }
+
+.row { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 420px) { .row { grid-template-columns: minmax(0, 1fr); } }
+input[type=text], input[type=number], select {
+  width: 100%; font: inherit; color: inherit; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 8px 10px; min-height: 42px;
+}
+input.lit { font-family: var(--mono); font-size: 0.9rem; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--form); outline-offset: 2px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 650; font-size: 0.95rem; cursor: pointer; }
+.check input { width: 1.15rem; height: 1.15rem; margin: 0.2rem 0 0; accent-color: var(--form); flex: none; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+button { font: inherit; font-size: 0.86rem; color: var(--form); background: transparent; border: 1px solid var(--rule); border-radius: 999px;
+  padding: 5px 12px; min-height: 34px; cursor: pointer; }
+button:hover { border-color: var(--form); }
+.capfields { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+.capfields[hidden] { display: none; }
+.fielderr { color: var(--refuse); font-size: 0.85rem; margin: 4px 0 0; }
+
+.verdict { border-radius: 6px; padding: 16px 18px; border: 1px solid; }
+.verdict[data-state=granted] { background: var(--grant-bg); border-color: var(--grant); }
+.verdict[data-state=refused] { background: var(--refuse-bg); border-color: var(--refuse); }
+.verdict[data-state=idle] { background: var(--sheet); border-color: var(--rule); border-style: dashed; color: var(--muted); }
+.verdict .word { font-size: 0.95rem; font-weight: 650; margin: 0; }
+.verdict[data-state=granted] .word, .verdict[data-state=granted] .rule { color: var(--grant); }
+.verdict[data-state=refused] .word, .verdict[data-state=refused] .rule { color: var(--refuse); }
+.verdict .rule { font-family: var(--mono); font-weight: 700; font-size: clamp(1.15rem, 4.6vw, 1.75rem); line-height: 1.15; margin: 2px 0 8px;
+  overflow-wrap: anywhere; letter-spacing: -0.01em; }
+.verdict .why { margin: 0; overflow-wrap: anywhere; }
+.verdict .chain { margin: 8px 0 0; font-family: var(--mono); font-size: 0.88rem; overflow-wrap: anywhere; }
+
+.ledger { margin-top: 14px; border: 1px solid var(--rule); border-radius: 6px; background: var(--sheet); overflow: hidden; }
+.ledger .lr { display: grid; grid-template-columns: 6.2rem repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+.ledger .lr:first-child { border-top: 0; }
+.ledger .lr > div { padding: 8px 10px; min-width: 0; }
+.ledger .lr > div + div { border-left: 1px solid var(--rule); }
+.ledger .head > div { font-size: 0.82rem; font-weight: 650; color: var(--muted); }
+.ledger .name { font-size: 0.86rem; font-weight: 650; }
+.ledger .cell::before { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-family: var(--mono); font-size: 0.8rem; line-height: 1.3; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--rule);
+  overflow-wrap: anywhere; }
+.chip.bad { border-color: var(--refuse); color: var(--refuse); background: var(--refuse-bg); text-decoration: line-through; }
+.chip.added { border-style: dashed; border-color: var(--form); color: var(--form); }
+.none { color: var(--muted); font-size: 0.85rem; }
+.ledger .foot { border-top: 1px solid var(--rule); padding: 8px 10px; font-size: 0.82rem; color: var(--muted); }
+@media (max-width: 640px) {
+  .ledger .head { display: none; }
+  .ledger .lr { grid-template-columns: minmax(0, 1fr); padding: 8px 0; }
+  .ledger .lr > div { padding: 2px 10px; }
+  .ledger .lr > div + div { border-left: 0; }
+  .ledger .cell { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr); gap: 8px; align-items: start; }
+  .ledger .cell::before { content: attr(data-col); display: block; font-size: 0.78rem; color: var(--muted); padding-top: 2px; }
+}
+.locked { color: var(--muted); border: 1px dashed var(--rule); border-radius: 6px; padding: 14px 16px; }
+footer { margin-top: 40px; color: var(--muted); font-size: 0.86rem; max-width: 78ch; }
+@media (prefers-reduced-motion: no-preference) { .verdict { transition: background-color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>SmartDelegate playground</h1>
+  <p class="lede">A human lends an agent one role they hold, for one task. Pick who asks and what they ask for, and see what
+    the token would carry. Then hand part of it to a sub-agent.</p>
+  <p class="note" id="scope-note">This page illustrates the delegation rules only. Real decisions (policy, field masking, budgets, audit)
+    come from the smartdelegate engine: <code>pip install sf-smartdelegate</code>, then <code>sf-smartdelegate --demo</code>.</p>
+
+  <section class="step" aria-labelledby="h-issue">
+    <header>
+      <h2 id="h-issue">Issue a token</h2>
+      <p>The human must hold the role, and the request cannot exceed the role's ceiling.</p>
+    </header>
+    <div class="cols">
+      <form class="sheet" id="issue-form" autocomplete="off" onsubmit="return false">
+        <fieldset>
+          <legend>Human</legend>
+          <div class="choices two" id="users"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Role to lend</legend>
+          <div class="choices" id="roles"></div>
+        </fieldset>
+        <fieldset>
+          <div class="row">
+            <div>
+              <label class="label" for="agent">Agent</label>
+              <select id="agent"></select>
+            </div>
+            <div>
+              <label class="label" for="ttl">Lifetime, seconds</label>
+              <input type="number" id="ttl" inputmode="numeric" step="1" placeholder="900">
+            </div>
+          </div>
+          <p class="hint">Without a lifetime the engine uses 900 seconds; it never issues more than 3600.</p>
+        </fieldset>
+        <fieldset>
+          <label class="label" for="task">Task</label>
+          <input type="text" id="task" class="lit" placeholder="none" spellcheck="false">
+          <div class="picks" id="task-picks"></div>
+        </fieldset>
+        <fieldset>
+          <label class="check"><input type="checkbox" id="use-role-cap" checked>
+            <span>Ask for everything the role allows</span></label>
+          <p class="hint">Unticked, the request names its own capability, and the role decides whether that is too much.</p>
+          <div class="capfields" id="cap-fields" hidden></div>
+        </fieldset>
+      </form>
+      <div class="out" aria-live="polite">
+        <div class="verdict" id="verdict" data-state="idle"></div>
+        <div class="ledger" id="ledger"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h-narrow">
+    <header>
+      <h2 id="h-narrow">Narrow it for a sub-agent</h2>
+      <p>An agent can pass on part of what its token holds. Asking for more is refused as widening.</p>
+    </header>
+    <div class="cols" id="narrow-cols">
+      <form class="sheet" id="narrow-form" autocomplete="off" onsubmit="return false">
+        <fieldset>
+          <div class="row">
+            <div>
+              <label class="label" for="actor">Sub-agent</label>
+              <select id="actor"></select>
+            </div>
+            <div>
+              <label class="label" for="child-ttl">Lifetime, seconds</label>
+              <input type="number" id="child-ttl" inputmode="numeric" step="1" placeholder="900">
+            </div>
+          </div>
+          <p class="hint">A sub-agent token never outlives its parent.</p>
+        </fieldset>
+        <fieldset>
+          <label class="check"><input type="checkbox" id="child-inherit" checked>
+            <span>Pass on everything the parent token holds</span></label>
+          <div class="capfields" id="child-cap-fields" hidden></div>
+        </fieldset>
+      </form>
+      <div class="out" aria-live="polite">
+        <div class="verdict" id="child-verdict" data-state="idle"></div>
+        <div class="ledger" id="child-ledger"></div>
+      </div>
+    </div>
+    <p class="locked" id="narrow-locked" hidden>There is no token to narrow yet. Change the request above until it is granted.</p>
+  </section>
+
+  <footer>
+    <p>The humans, agents and roles are those of the example bundle that ships with smartdelegate. Budgets are whole numbers of minor
+      units: 10000 EUR is 100.00 EUR. A granted token is a ceiling, not a permission: each tool call is still decided by policy.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+// rules:start
+// The delegation rules, as in src/sf_smartdelegate/tokens.py (_matches, _covers,
+// Cap.validate, Cap.check_narrower_than) and spec/ROLES.md steps 4.1 to 4.6.
+// No DOM in this block: tests/test_integrations.py runs it under Node and
+// compares its verdicts with the Python engine.
+const DATA = {
+  engine: { default_ttl: 900, max_ttl: 3600 },
+  // entities.json of the example bundle: who is in what
+  parents: {
+    "User::alice": ["Group::support"],
+    "User::bob": ["Group::support", "Group::supervisors"],
+    "User::carol": ["Group::compliance"],
+    "User::dave": [],
+    "Agent::support-bot": ["AgentGroup::support-agents"],
+    "Agent::refund-helper": ["AgentGroup::support-agents"],
+    "Agent::summarizer": ["AgentGroup::support-agents"],
+    "Agent::rogue-bot": []
+  },
+  users: ["alice", "bob", "carol", "dave"],
+  agents: ["support-bot", "refund-helper", "summarizer", "rogue-bot"],
+  // roles.json of the example bundle, unchanged
+  roles: {
+    "support-agent": {
+      "description": "Front-line support: read and update customers, refund up to 100 EUR in total per task.",
+      "members": [{"type": "Group", "id": "support"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["crm.customer/*", "billing.refund/*"],
+        "deny_labels": ["secret"],
+        "budget": {"EUR": 10000}
+      },
+      "max_ttl": 600
+    },
+    "supervisor": {
+      "description": "Escalations only: larger refunds, for a named escalation, from the support bot.",
+      "members": [{"type": "Group", "id": "supervisors"}],
+      "cap": {
+        "actions": ["read", "create"],
+        "resources": ["crm.customer/*", "billing.refund/*"],
+        "budget": {"EUR": 50000}
+      },
+      "max_ttl": 300,
+      "tasks": ["escalation-*"],
+      "agents": ["support-bot"]
+    },
+    "auditor": {
+      "description": "Look, do not touch, and never see payment data.",
+      "members": [{"type": "Group", "id": "compliance"}, {"type": "Group", "id": "supervisors"}],
+      "cap": {
+        "actions": ["*"],
+        "resources": ["crm.customer/*"],
+        "deny_labels": ["financial"]
+      }
+    },
+    "break-glass": {
+      "description": "One named person, during an incident.",
+      "members": [{"type": "User", "id": "carol"}],
+      "cap": {"actions": ["read"], "resources": ["hr.salary/*"]},
+      "max_ttl": 120,
+      "tasks": ["incident-*"],
+      "bindings": {"aws": {"role_arn": "arn:aws:iam::123456789012:role/hr-break-glass"}}
+    }
+  },
+  // policies/delegation.cedar of the example bundle, as a table: who may hand
+  // authority to which agent. In the engine this is ordinary policy.
+  delegation: {
+    permits: [
+      { id: "delegate-support-users", from: "Group::support", to: ["support-bot"] },
+      { id: "delegate-compliance", from: "Group::compliance", to: ["support-bot"] },
+      { id: "delegate-support-bot-helpers", from: "Agent::support-bot", to: ["refund-helper", "summarizer"] },
+      { id: "delegate-helper-chain", from: "Agent::refund-helper", to: ["summarizer"] }
+    ],
+    // forbid: an agent may not hand out a token that lives longer than this
+    agent_max_ttl: { id: "no-long-lived-subagents", seconds: 600 }
+  }
+};
+
+function ruleId(code) { return "DELEGATE-" + code.toUpperCase().replaceAll("_", "-"); }
+
+// tokens._matches
+function matches(pattern, s) {
+  return pattern.endsWith("*") ? s.startsWith(pattern.slice(0, -1)) : pattern === s;
+}
+
+// tokens._covers: does `parent` cover every string that `child` covers?
+function covers(parent, child) {
+  if (parent.endsWith("*")) {
+    const prefix = parent.slice(0, -1);
+    return child.endsWith("*") ? child.replace(/\*+$/, "").startsWith(prefix) : child.startsWith(prefix);
+  }
+  return !child.endsWith("*") && parent === child;
+}
+
+function fullCap(cap) {
+  return {
+    actions: [...(cap.actions || [])], resources: [...(cap.resources || [])], deny_labels: [...(cap.deny_labels || [])],
+    deny_fields: [...(cap.deny_fields || [])], budget: Object.assign({}, cap.budget || {})
+  };
+}
+
+// Cap.validate: null when well formed, else the message
+function validateCap(cap) {
+  for (const p of cap.actions.concat(cap.resources)) {
+    if (!p || p.slice(0, -1).includes("*")) return "pattern '" + p + "': only one trailing * is allowed";
+  }
+  for (const cur of Object.keys(cap.budget)) {
+    if (cap.budget[cur] < 0) return "budget cannot be negative";
+  }
+  return null;
+}
+
+// Cap.check_narrower_than: null when `child` grants nothing `parent` does not, else the message
+function checkNarrower(child, parent) {
+  for (const a of child.actions) {
+    if (!parent.actions.some(p => covers(p, a))) return "action '" + a + "' is not covered by the parent token";
+  }
+  for (const r of child.resources) {
+    if (!parent.resources.some(p => covers(p, r))) return "resource '" + r + "' is not covered by the parent token";
+  }
+  for (const l of parent.deny_labels) {
+    if (!child.deny_labels.includes(l)) return "label '" + l + "' is denied by the parent and must stay denied";
+  }
+  for (const f of parent.deny_fields) {
+    if (!child.deny_fields.includes(f)) return "field '" + f + "' is denied by the parent and must stay denied";
+  }
+  for (const cur of Object.keys(child.budget)) {
+    if (!(cur in parent.budget)) return "the parent token has no " + cur + " budget to pass on";
+    if (child.budget[cur] > parent.budget[cur]) return "budget " + child.budget[cur] + " " + cur + " exceeds the parent's " + parent.budget[cur];
+  }
+  return null;
+}
+
+// the entity itself and everything it is in, transitively
+function selfAndAncestors(uid) {
+  const seen = new Set([uid]);
+  const todo = [uid];
+  while (todo.length) {
+    for (const p of DATA.parents[todo.pop()] || []) {
+      if (!seen.has(p)) { seen.add(p); todo.push(p); }
+    }
+  }
+  return seen;
+}
+
+function sortedUnion(a, b) { return [...new Set(a.concat(b))].sort(); }
+
+function clampTtl(ttl) {
+  const asked = Number.isInteger(ttl) ? ttl : DATA.engine.default_ttl;
+  return Math.max(1, Math.min(asked, DATA.engine.max_ttl));
+}
+
+function refuse(code, message) { return { ok: false, code: code, rule: ruleId(code), message: message }; }
+
+// the delegation policy of the example bundle (ROLES.md step 5)
+function checkDelegation(fromUid, fromLabel, agent, ttl) {
+  if (!(("Agent::" + agent) in DATA.parents)) return refuse("unknown_agent", "agent '" + agent + "' is not registered in entities.json");
+  const held = selfAndAncestors(fromUid);
+  const permitted = DATA.delegation.permits.some(p => held.has(p.from) && p.to.includes(agent));
+  const limit = DATA.delegation.agent_max_ttl;
+  const forbidden = fromUid.startsWith("Agent::") && ttl > limit.seconds;
+  if (forbidden) return refuse("delegation_denied", fromLabel + " may not delegate to agent '" + agent + "': forbidden by " + limit.id);
+  if (!permitted) return refuse("delegation_denied", fromLabel + " may not delegate to agent '" + agent + "': no policy permits it");
+  return null;
+}
+
+// issue_token with a role. req: {user, agent, role, task, cap, ttl}; cap and ttl may be null.
+function issue(req) {
+  let cap = req.cap ? fullCap(req.cap) : null;
+  if (cap) {
+    const bad = validateCap(cap);
+    if (bad) return refuse("invalid_cap", bad);              // before all role checks
+  }
+  let ttl = clampTtl(req.ttl);
+  const role = Object.prototype.hasOwnProperty.call(DATA.roles, req.role) ? DATA.roles[req.role] : null;
+  if (!role) return refuse("unknown_role", "roles.json defines no role named '" + req.role + "'");                       // 4.1
+  const held = selfAndAncestors("User::" + req.user);
+  if (!role.members.some(m => held.has(m.type + "::" + m.id))) {
+    return refuse("role_not_held", "user '" + req.user + "' does not hold the role '" + req.role + "'");                 // 4.2
+  }
+  if (role.agents && !role.agents.some(a => matches(a, req.agent))) {
+    return refuse("role_exceeded", "agent '" + req.agent + "' may not be started in the role '" + req.role + "'");       // 4.3
+  }
+  if (role.tasks && !(req.task && role.tasks.some(t => matches(t, req.task)))) {
+    return refuse("role_exceeded", "the role '" + req.role + "' covers only tasks matching: " + role.tasks.join(", "));  // 4.4
+  }
+  const ceiling = fullCap(role.cap);
+  if (!cap) {
+    cap = fullCap(ceiling);                                                                                               // 4.5
+  } else {
+    // what the role never sees, the token never sees
+    cap.deny_labels = sortedUnion(cap.deny_labels, ceiling.deny_labels);
+    cap.deny_fields = sortedUnion(cap.deny_fields, ceiling.deny_fields);
+    const why = checkNarrower(cap, ceiling);
+    if (why) {
+      return refuse("role_exceeded", "more than the role '" + req.role + "' allows: " +
+        why.replaceAll("the parent token", "the role").replaceAll("the parent's", "the role's").replaceAll("by the parent", "by the role"));
+    }
+  }
+  if (role.max_ttl) ttl = Math.min(ttl, role.max_ttl);                                                                    // 4.6
+  const denied = checkDelegation("User::" + req.user, 'User::"' + req.user + '"', req.agent, ttl);
+  if (denied) return denied;
+  return { ok: true, user: req.user, chain: [req.agent], role: req.role, task: req.task || null, cap: cap, ttl: ttl };
+}
+
+// exchange_token. parent: a granted result of issue() or narrow(). req: {actor, cap, ttl}; cap and ttl may be null.
+function narrow(parent, req) {
+  let cap = req.cap ? fullCap(req.cap) : null;
+  if (cap) {
+    const bad = validateCap(cap);
+    if (bad) return refuse("invalid_cap", bad);
+  } else {
+    cap = fullCap(parent.cap);                                // omitted: inherit the parent's
+  }
+  const why = checkNarrower(cap, parent.cap);
+  if (why) return refuse("widening", why);
+  const ttl = Math.min(clampTtl(req.ttl), parent.ttl);        // never outlives the parent
+  const leaf = parent.chain[parent.chain.length - 1];
+  const denied = checkDelegation("Agent::" + leaf, 'Agent::"' + leaf + '"', req.actor, ttl);
+  if (denied) return denied;
+  return { ok: true, user: parent.user, chain: parent.chain.concat([req.actor]), role: parent.role, task: parent.task, cap: cap, ttl: ttl };
+}
+// rules:end
+
+// ---- page ------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+
+function h(tag, attrs) {
+  const el = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    if (k === "text") el.textContent = attrs[k];
+    else if (k === "class") el.className = attrs[k];
+    else el.setAttribute(k, attrs[k]);
+  }
+  for (let i = 2; i < arguments.length; i++) {
+    const c = arguments[i];
+    if (c !== null && c !== undefined) el.append(c);
+  }
+  return el;
+}
+
+function splitList(text) { return text.split(/[\s,]+/).filter(Boolean); }
+
+function groupsOf(user) {
+  return (DATA.parents["User::" + user] || []).map(p => p.split("::")[1]);
+}
+
+function money(amount, cur) {
+  return amount + " " + cur + " (" + (amount / 100).toFixed(2) + ")";
+}
+
+// Builds the capability inputs inside `box`. Returns {read(), fill(cap)}.
+function capFields(box, prefix, picks) {
+  const field = (id, label, placeholder, hint) => {
+    const input = h("input", { type: "text", id: prefix + id, class: "lit", placeholder: placeholder, spellcheck: "false", autocapitalize: "off" });
+    const wrap = h("div", null, h("label", { class: "label", for: prefix + id, text: label }), input);
+    if (hint) wrap.append(h("p", { class: "hint", text: hint }));
+    box.append(wrap);
+    return input;
+  };
+  const actions = field("actions", "Actions", "read, create", "Names, separated by commas. One trailing * is a wildcard.");
+  const resources = field("resources", "Resources", "crm.customer/*", "path/id, for example crm.customer/c-1 or crm.customer/*.");
+  const labels = field("labels", "Never sees (data labels)", "secret", null);
+  const cur = h("input", { type: "text", id: prefix + "currency", class: "lit", placeholder: "EUR", spellcheck: "false", maxlength: "8" });
+  const amount = h("input", { type: "number", id: prefix + "amount", inputmode: "numeric", step: "1", placeholder: "no budget" });
+  const err = h("p", { class: "fielderr", id: prefix + "error", hidden: "" });
+  box.append(h("div", null,
+    h("div", { class: "row" },
+      h("div", null, h("label", { class: "label", for: prefix + "currency", text: "Budget currency" }), cur),
+      h("div", null, h("label", { class: "label", for: prefix + "amount", text: "Budget, minor units" }), amount)),
+    h("p", { class: "hint", text: "10000 is 100.00. Leave the amount empty for a token that cannot spend." }), err));
+  const row = h("div", { class: "picks" });
+  box.append(row);
+  const api = {
+    fill(cap) {
+      actions.value = cap.actions.join(", ");
+      resources.value = cap.resources.join(", ");
+      labels.value = cap.deny_labels.join(", ");
+      const c = Object.keys(cap.budget)[0];
+      cur.value = c || "EUR";
+      amount.value = c ? String(cap.budget[c]) : "";
+    },
+    // -> {cap} or {error}
+    read() {
+      const cap = { actions: splitList(actions.value), resources: splitList(resources.value), deny_labels: splitList(labels.value),
+                    deny_fields: [], budget: {} };
+      let problem = null;
+      if (amount.value.trim() !== "" || amount.validity.badInput) {
+        const n = Number(amount.value);
+        if (amount.validity.badInput || !Number.isSafeInteger(n)) problem = "The budget must be a whole number of minor units.";
+        else if (!cur.value.trim()) problem = "A budget needs a currency.";
+        else cap.budget[cur.value.trim()] = n;
+      }
+      err.hidden = !problem;
+      err.textContent = problem || "";
+      return problem ? { error: problem } : { cap: cap };
+    },
+    setPicks(list) {
+      row.replaceChildren(...list.map(p => {
+        const b = h("button", { type: "button", text: p.label });
+        b.addEventListener("click", () => { api.fill(p.cap()); render(); });
+        return b;
+      }));
+    }
+  };
+  api.setPicks(picks);
+  return api;
+}
+
+function intOrNull(input) {
+  const v = input.value.trim();
+  if (v === "") return null;
+  const n = Number(v);
+  return Number.isSafeInteger(n) ? n : null;
+}
+
+function chips(items, opts) {
+  if (!items.length) return h("span", { class: "none", text: (opts && opts.empty) || "none" });
+  const box = h("div", { class: "chips" });
+  for (const it of items) {
+    box.append(h("span", { class: "chip" + (it.bad ? " bad" : "") + (it.added ? " added" : ""), text: it.text, title: it.title || "" }));
+  }
+  return box;
+}
+
+// One comparison table: ceiling | requested | result.
+function ledger(box, cols, ceiling, ceilingTtl, asked, askedTtl, result, footText) {
+  const rows = [];
+  const cell = (col, content) => h("div", { class: "cell", "data-col": col }, content);
+  const plain = list => list.map(t => ({ text: t }));
+  const budget = cap => Object.keys(cap.budget).map(c => ({ text: money(cap.budget[c], c) }));
+  const line = (name, a, b, c) => rows.push(h("div", { class: "lr" }, h("div", { class: "name", text: name }), cell(cols[0], a), cell(cols[1], b), cell(cols[2], c)));
+  const dash = () => h("span", { class: "none", text: "no token" });
+  const res = result && result.ok ? result.cap : null;
+
+  line("Actions", chips(plain(ceiling.actions)),
+    asked ? chips(asked.actions.map(a => ({ text: a, bad: !ceiling.actions.some(p => covers(p, a)), title: "not covered by the " + cols[0].toLowerCase() }))) : chips([], { empty: "same as " + cols[0].toLowerCase() }),
+    res ? chips(plain(res.actions)) : dash());
+  line("Resources", chips(plain(ceiling.resources)),
+    asked ? chips(asked.resources.map(r => ({ text: r, bad: !ceiling.resources.some(p => covers(p, r)) }))) : chips([], { empty: "same as " + cols[0].toLowerCase() }),
+    res ? chips(plain(res.resources)) : dash());
+  line("Never sees", chips(plain(ceiling.deny_labels)),
+    asked ? chips(plain(asked.deny_labels)) : chips([], { empty: "same as " + cols[0].toLowerCase() }),
+    res ? chips(res.deny_labels.map(l => ({ text: l, added: !!asked && !asked.deny_labels.includes(l), title: "kept from the " + cols[0].toLowerCase() }))) : dash());
+  line("Budget", chips(budget(ceiling), { empty: "cannot spend" }),
+    asked ? chips(Object.keys(asked.budget).map(c => ({ text: money(asked.budget[c], c), bad: !(c in ceiling.budget) || asked.budget[c] > ceiling.budget[c] })), { empty: "cannot spend" })
+          : chips([], { empty: "same as " + cols[0].toLowerCase() }),
+    res ? chips(budget(res), { empty: "cannot spend" }) : dash());
+  line("Lifetime", h("span", { class: "lit", text: ceilingTtl }), h("span", { class: "lit", text: askedTtl }),
+    result && result.ok ? h("span", { class: "lit", text: result.ttl + " s" }) : dash());
+
+  box.replaceChildren(
+    h("div", { class: "lr head" }, h("div", { text: "" }), h("div", { text: cols[0] }), h("div", { text: cols[1] }), h("div", { text: cols[2] })),
+    ...rows);
+  if (footText) box.append(h("div", { class: "foot", text: footText }));
+}
+
+function showVerdict(box, result, grantedText, problem) {
+  if (problem) {
+    box.dataset.state = "idle";
+    box.dataset.code = "input";
+    box.replaceChildren(h("p", { class: "word", text: "Fix the request" }), h("p", { class: "why", text: problem }));
+    return;
+  }
+  if (result.ok) {
+    box.dataset.state = "granted";
+    box.dataset.code = "granted";
+    box.replaceChildren(h("p", { class: "word", text: "Granted" }), h("p", { class: "rule", text: grantedText }),
+      h("p", { class: "why", text: "Lives " + result.ttl + " seconds" + (result.task ? ", for task " + result.task : "") + ". Role: " + result.role + "." }),
+      h("p", { class: "chain", text: [result.user].concat(result.chain).join(" → ") }));
+    return;
+  }
+  box.dataset.state = "refused";
+  box.dataset.code = result.code;
+  box.replaceChildren(h("p", { class: "word", text: "Refused: " + result.code }), h("p", { class: "rule", text: result.rule }),
+    h("p", { class: "why", text: result.message }));
+}
+
+let rootCap, childCap, lastParentKey = null;
+
+function selected(name) {
+  const el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : null;
+}
+
+function render() {
+  // ---- issue
+  const role = DATA.roles[selected("role")];
+  const ceiling = fullCap(role.cap);
+  const useRole = $("use-role-cap").checked;
+  $("cap-fields").hidden = useRole;
+  const read = useRole ? { cap: null } : rootCap.read();
+  const ttl = intOrNull($("ttl"));
+  const req = { user: selected("user"), agent: $("agent").value, role: selected("role"), task: $("task").value.trim() || null, cap: read.cap, ttl: ttl };
+  const result = read.error ? null : issue(req);
+  showVerdict($("verdict"), result, "token issued", read.error);
+  const limits = [];
+  if (role.tasks) limits.push("tasks " + role.tasks.join(", "));
+  if (role.agents) limits.push("agents " + role.agents.join(", "));
+  ledger($("ledger"), ["Role ceiling", "Requested", "Token gets"], ceiling, role.max_ttl ? "at most " + role.max_ttl + " s" : "engine limit, 3600 s",
+    read.cap || null, ttl === null ? "default, 900 s" : ttl + " s", result,
+    "Held by " + role.members.map(m => m.type + " " + m.id).join(", ") + (limits.length ? ". Only for " + limits.join("; ") + "." : "."));
+
+  // ---- narrow
+  const granted = !!(result && result.ok);
+  $("narrow-cols").hidden = !granted;
+  $("narrow-locked").hidden = granted;
+  if (!granted) {
+    lastParentKey = null;
+    $("child-verdict").dataset.code = "none";
+    return;
+  }
+  const key = JSON.stringify(result.cap);
+  if (key !== lastParentKey) {            // a new parent token: start the sub-agent request from it
+    childCap.fill(result.cap);
+    lastParentKey = key;
+  }
+  const inherit = $("child-inherit").checked;
+  $("child-cap-fields").hidden = inherit;
+  const cread = inherit ? { cap: null } : childCap.read();
+  const cttl = intOrNull($("child-ttl"));
+  const child = cread.error ? null : narrow(result, { actor: $("actor").value, cap: cread.cap, ttl: cttl });
+  showVerdict($("child-verdict"), child, "sub-agent token issued", cread.error);
+  ledger($("child-ledger"), ["Parent token", "Requested", "Sub-agent gets"], result.cap, result.ttl + " s",
+    cread.cap || null, cttl === null ? "default, 900 s" : cttl + " s", child,
+    "What the parent never sees must stay listed under Never sees.");
+}
+
+function init() {
+  DATA.users.forEach((u, i) => {
+    const g = groupsOf(u);
+    $("users").append(h("label", { class: "choice" },
+      h("input", Object.assign({ type: "radio", name: "user", value: u }, i === 0 ? { checked: "" } : {})),
+      h("span", null, h("b", { text: u }), h("small", { text: g.length ? "in " + g.join(", ") : "in no group" }))));
+  });
+  Object.keys(DATA.roles).forEach((name, i) => {
+    const r = DATA.roles[name];
+    $("roles").append(h("label", { class: "choice" },
+      h("input", Object.assign({ type: "radio", name: "role", value: name }, i === 0 ? { checked: "" } : {})),
+      h("span", null, h("b", { text: name }), h("small", { text: r.description }))));
+  });
+  for (const a of DATA.agents) $("agent").append(h("option", { value: a, text: a }));
+  for (const a of DATA.agents.filter(a => a !== "support-bot")) $("actor").append(h("option", { value: a, text: a }));
+  $("actor").value = "summarizer";
+  for (const t of ["ticket-7", "escalation-1", "incident-42", ""]) {
+    const b = h("button", { type: "button", text: t || "no task" });
+    b.addEventListener("click", () => { $("task").value = t; render(); });
+    $("task-picks").append(b);
+  }
+  $("task").value = "ticket-7";
+
+  const roleCap = () => fullCap(DATA.roles[selected("role")].cap);
+  rootCap = capFields($("cap-fields"), "cap-", [
+    { label: "Role ceiling", cap: roleCap },
+    { label: "Read customers only", cap: () => Object.assign(roleCap(), { actions: ["read"], resources: ["crm.customer/*"], budget: {} }) },
+    { label: "Budget 200.00 EUR", cap: () => Object.assign(roleCap(), { budget: { EUR: 20000 } }) },
+    { label: "Everything", cap: () => Object.assign(roleCap(), { actions: ["*"], resources: ["*"] }) }
+  ]);
+  const parentCap = () => JSON.parse(lastParentKey);
+  childCap = capFields($("child-cap-fields"), "child-", [
+    { label: "Parent token", cap: parentCap },
+    { label: "Read one customer", cap: () => Object.assign(parentCap(), { actions: ["read"], resources: ["crm.customer/c-1"], budget: {} }) },
+    { label: "All resources", cap: () => Object.assign(parentCap(), { resources: ["*"] }) }
+  ]);
+  rootCap.fill(roleCap());
+
+  $("use-role-cap").addEventListener("change", () => { if (!$("use-role-cap").checked) rootCap.fill(roleCap()); });
+  document.addEventListener("input", render);
+  document.addEventListener("change", render);
+  render();
+}
+
+if (typeof document !== "undefined") init();
+</script>
+</body>
+</html>
