@@ -1,0 +1,975 @@
+{
+ "suite": "02_delegation",
+ "cases": [
+  {
+   "name": "sub-agent gets a narrower token and the chain is recorded",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true,
+      "user": "alice",
+      "chain": [
+       "support-bot",
+       "refund-helper"
+      ]
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow",
+      "principal": {
+       "user": "alice",
+       "agent": "refund-helper",
+       "chain": [
+        "support-bot",
+        "refund-helper"
+       ]
+      },
+      "obligations": {
+       "fields": {
+        "allow": [
+         "card.last4",
+         "id",
+         "region",
+         "tier"
+        ]
+       }
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-2"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_resource"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "update",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "capability_action"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a hop can never widen actions, resources, budget or deny lists",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       },
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read",
+        "delete"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.*"
+       ],
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20001
+       },
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "create"
+       ],
+       "resources": [
+        "billing.refund/*"
+       ],
+       "budget": {
+        "USD": 1
+       },
+       "deny_labels": [
+        "secret"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "deny_labels": [
+        "secret"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "widening"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ],
+       "deny_labels": [
+        "secret",
+        "pii"
+       ],
+       "deny_fields": [
+        "crm.customer.notes"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a child token never outlives its parent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "ttl": 300
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000100,
+      "ttl": 600,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true,
+      "expires_at": 1700000300
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    }
+   ]
+  },
+  {
+   "name": "omitting cap inherits the parent capability unchanged",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300
+     },
+     "expect": {
+      "ok": true,
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      }
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    }
+   ]
+  },
+  {
+   "name": "delegation is governed by policy",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "ttl": 3600
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "rogue-bot",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "ghost",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "unknown_agent"
+      }
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 700,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "chain depth is limited",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$c",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "ttl": 200,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true,
+      "chain": [
+       "support-bot",
+       "refund-helper",
+       "summarizer"
+      ]
+     },
+     "save": {
+      "g": "token",
+      "g_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$g",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "ttl": 100,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "depth_exceeded"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "revoking a parent revokes the whole subtree",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000000,
+      "ttl": 300,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "c": "token",
+      "c_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$c",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "ttl": 200,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "g": "token",
+      "g_id": "token_id"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$g",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "token_id": "$t_id",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$g",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$c",
+      "actor": "summarizer",
+      "now": 1700000000,
+      "ttl": 200,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "token_revoked"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "an expired parent cannot delegate",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read",
+        "create",
+        "update"
+       ],
+       "resources": [
+        "crm.customer/*",
+        "billing.refund/*"
+       ],
+       "budget": {
+        "EUR": 20000
+       }
+      },
+      "now": 1700000000,
+      "ttl": 60
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token",
+      "t_id": "token_id"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "now": 1700000061,
+      "ttl": 30,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/c-1"
+       ],
+       "deny_labels": [
+        "pii"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "token_expired"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

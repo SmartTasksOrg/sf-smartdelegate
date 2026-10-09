@@ -1,0 +1,473 @@
+{
+ "id": "12_rate_limit_and_approval_reuse",
+ "name": "Rate limit and approval reuse",
+ "description": "An IT operator's agent resets passwords in a burst and hits the rate limit. Then it grants administrator access: the grant is held for an IT manager, the approval is good for that exact request and for one use.",
+ "units": [
+  "it-ops",
+  "hr",
+  "sales"
+ ],
+ "requires": [
+  "test_clock"
+ ],
+ "exclusive": [
+  "operator"
+ ],
+ "settle_seconds": 11,
+ "cast": {
+  "operator": {
+   "group": "it-ops"
+  },
+  "it_manager": {
+   "group": "it-managers"
+  },
+  "requester": {
+   "group": "hr",
+   "not_group": "hr-managers"
+  },
+  "manager": {
+   "group": "sales-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "operator",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "it-operator",
+   "task": "it-{n}",
+   "save": "ops",
+   "expect": "ok",
+   "why": "A system administrator lends the IT orchestrator the it-operator role."
+  },
+  {
+   "id": "s2",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "reset_password",
+   "resource": "it.account/acc-{n}-1",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Password reset 1 of a burst."
+  },
+  {
+   "id": "s3",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "reset_password",
+   "resource": "it.account/acc-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Password reset 2 of a burst."
+  },
+  {
+   "id": "s4",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "reset_password",
+   "resource": "it.account/acc-{n}-3",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Password reset 3 of a burst."
+  },
+  {
+   "id": "s5",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "reset_password",
+   "resource": "it.account/acc-{n}-4",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:rate_limited",
+   "why": "The fourth reset within ten seconds is over the limit of three."
+  },
+  {
+   "id": "s6",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "read",
+   "resource": "it.account/acc-{n}-4",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "acc-{n}-4",
+    "username": "k.lee",
+    "status": "active",
+    "mfa_secret": "JBSWY3DPEHPK3PXP"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "mfa_secret"
+    ],
+    "visible": [
+     "status"
+    ]
+   },
+   "why": "Other actions are not limited."
+  },
+  {
+   "id": "s7",
+   "actor": "clock",
+   "op": "advance",
+   "seconds": 11,
+   "why": "Eleven seconds pass."
+  },
+  {
+   "id": "s8",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "reset_password",
+   "resource": "it.account/acc-{n}-4",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The window has moved on: the reset goes through."
+  },
+  {
+   "id": "s9",
+   "actor": "requester",
+   "op": "delegate",
+   "agent": "hr-orchestrator",
+   "role": "hr-partner",
+   "task": "onboard-{n}",
+   "save": "hr_task",
+   "expect": "ok",
+   "why": "An HR partner lends the HR orchestrator the hr-partner role."
+  },
+  {
+   "id": "s10",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "hr_task",
+   "action": "create",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "ar-{n}",
+    "employee_id": "emp-{n}",
+    "system": "erp",
+    "level": "admin",
+    "requested_by": "{requester}",
+    "justification": "team lead",
+    "status": "requested"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "HR raises a request for administrator access for a new team lead."
+  },
+  {
+   "id": "s11",
+   "actor": "hr-orchestrator",
+   "op": "handoff",
+   "to": "it-orchestrator",
+   "item": {
+    "work": "grant access",
+    "access_request": "ar-{n}"
+   },
+   "tokens": null,
+   "why": "The request goes to IT as a work item."
+  },
+  {
+   "id": "s12",
+   "actor": "manager",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "access-approver",
+   "task": "access-{n}",
+   "save": "manager_approval",
+   "expect": "ok",
+   "why": "The employee's manager lends the IT orchestrator the access-approver role."
+  },
+  {
+   "id": "s13",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "manager_approval",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager approves the request."
+  },
+  {
+   "id": "s14",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "Administrator access is held for an IT manager."
+  },
+  {
+   "id": "s15",
+   "actor": "operator",
+   "op": "approve",
+   "request": "s14",
+   "expect": "error:self_approval",
+   "why": "The operator cannot release their own agent's request."
+  },
+  {
+   "id": "s16",
+   "actor": "manager",
+   "op": "approve",
+   "request": "s14",
+   "expect": "error:approval_denied",
+   "why": "The employee's manager is not an IT manager."
+  },
+  {
+   "id": "s17",
+   "actor": "it_manager",
+   "op": "approve",
+   "request": "s14",
+   "expect": "ok",
+   "why": "An IT manager releases it."
+  },
+  {
+   "id": "s18",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}-other",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "The approval is for ar-{n}: another request is held on its own."
+  },
+  {
+   "id": "s19",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": {
+    "ticket": "urgent"
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "The approval is for the request as it was made: with a changed context it is a different request."
+  },
+  {
+   "id": "s20",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The exact request goes through."
+  },
+  {
+   "id": "s21",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "The approval is used up: the same request again is held again."
+  },
+  {
+   "id": "s22",
+   "actor": "it_manager",
+   "op": "approve",
+   "request": "s21",
+   "expect": "ok",
+   "why": "The IT manager approves the repeated request as well."
+  },
+  {
+   "id": "s23",
+   "actor": "several agents at once",
+   "op": "parallel",
+   "steps": [
+    {
+     "id": "s23.1",
+     "actor": "it-orchestrator",
+     "op": "call",
+     "token": "ops",
+     "action": "grant",
+     "resource": "it.access_request/ar-{n}",
+     "attrs": {
+      "requested_by": "{requester}",
+      "employee_id": "emp-{n}",
+      "approved_by": "{manager}",
+      "level": "admin"
+     },
+     "why": "One of three copies of the approved request, sent at the same time."
+    },
+    {
+     "id": "s23.2",
+     "actor": "it-orchestrator",
+     "op": "call",
+     "token": "ops",
+     "action": "grant",
+     "resource": "it.access_request/ar-{n}",
+     "attrs": {
+      "requested_by": "{requester}",
+      "employee_id": "emp-{n}",
+      "approved_by": "{manager}",
+      "level": "admin"
+     },
+     "why": "One of three copies of the approved request, sent at the same time."
+    },
+    {
+     "id": "s23.3",
+     "actor": "it-orchestrator",
+     "op": "call",
+     "token": "ops",
+     "action": "grant",
+     "resource": "it.access_request/ar-{n}",
+     "attrs": {
+      "requested_by": "{requester}",
+      "employee_id": "emp-{n}",
+      "approved_by": "{manager}",
+      "level": "admin"
+     },
+     "why": "One of three copies of the approved request, sent at the same time."
+    }
+   ],
+   "expect": {
+    "allow": 1,
+    "rest": "deny:approval_required"
+   },
+   "why": "Three copies of the approved request race for the one approval. Exactly one wins; the others are held."
+  },
+  {
+   "id": "s24",
+   "actor": "it_manager",
+   "op": "approve",
+   "request": "s21",
+   "expect": "ok",
+   "why": "The IT manager approves once more (the held copies are the same request, so it is the same approval)."
+  },
+  {
+   "id": "s25",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}-someone-else",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "The approval is for the request as it was made, attributes included: it was given for employee emp-{n}, so the same request naming another employee is a different request and is held on its own."
+  },
+  {
+   "id": "s26",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{it_manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "The same holds for any other attribute: with the approving manager changed it is a different request too."
+  },
+  {
+   "id": "s27",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{requester}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{manager}",
+    "level": "admin"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The approval is still there for the request it was given for, once."
+  }
+ ]
+}

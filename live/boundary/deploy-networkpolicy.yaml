@@ -1,0 +1,57 @@
+# UNTESTED deployment artifact — syntactically checked here, never applied here.
+#
+# The same topology as live/boundary for Kubernetes. The agent Pod is allowed
+# exactly one egress: TCP 8182 to Pods labelled app=smartdelegate-proxy. A
+# default-deny egress policy removes everything else, DNS included, so the
+# agent cannot reach the upstream, the database, the decision daemon's admin
+# port or the internet even if it learns their addresses. NetworkPolicy is
+# enforced by the CNI plugin (Calico, Cilium, ...), not by the Pod.
+#
+# What this does NOT prove (see live/README.md): it has not been applied to a
+# cluster; it needs a CNI that enforces NetworkPolicy; it does not constrain
+# host networking, node-level access or a Pod that runs with hostNetwork.
+#
+#   kubectl apply --dry-run=client -f deploy-networkpolicy.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-default-deny-egress
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels: {app: kestrel-agent}
+  policyTypes: [Egress]
+  egress: []            # deny all egress, then add back only the proxy below
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress-to-proxy-only
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels: {app: kestrel-agent}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: smartdelegate-proxy}
+      ports:
+        - {protocol: TCP, port: 8182}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: proxy-ingress-from-agents
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels: {app: smartdelegate-proxy}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: kestrel-agent}
+      ports:
+        - {protocol: TCP, port: 8182}

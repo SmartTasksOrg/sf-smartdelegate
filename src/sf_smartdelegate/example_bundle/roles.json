@@ -1,0 +1,44 @@
+{
+  "roles": {
+    "support-agent": {
+      "description": "Front-line support: read and update customers, refund up to 100 EUR in total per task.",
+      "members": [{"type": "Group", "id": "support"}],
+      "cap": {
+        "actions": ["read", "create", "update"],
+        "resources": ["crm.customer/*", "billing.refund/*"],
+        "deny_labels": ["secret"],
+        "budget": {"EUR": 10000}
+      },
+      "max_ttl": 600
+    },
+    "supervisor": {
+      "description": "Escalations only: larger refunds, for a named escalation, from the support bot.",
+      "members": [{"type": "Group", "id": "supervisors"}],
+      "cap": {
+        "actions": ["read", "create"],
+        "resources": ["crm.customer/*", "billing.refund/*"],
+        "budget": {"EUR": 50000}
+      },
+      "max_ttl": 300,
+      "tasks": ["escalation-*"],
+      "agents": ["support-bot"]
+    },
+    "auditor": {
+      "description": "Look, do not touch, and never see payment data.",
+      "members": [{"type": "Group", "id": "compliance"}, {"type": "Group", "id": "supervisors"}],
+      "cap": {
+        "actions": ["*"],
+        "resources": ["crm.customer/*"],
+        "deny_labels": ["financial"]
+      }
+    },
+    "break-glass": {
+      "description": "One named person, during an incident.",
+      "members": [{"type": "User", "id": "carol"}],
+      "cap": {"actions": ["read"], "resources": ["hr.salary/*"]},
+      "max_ttl": 120,
+      "tasks": ["incident-*"],
+      "bindings": {"aws": {"role_arn": "arn:aws:iam::123456789012:role/hr-break-glass"}}
+    }
+  }
+}

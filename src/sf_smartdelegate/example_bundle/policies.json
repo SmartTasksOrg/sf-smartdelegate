@@ -1,0 +1,1394 @@
+{
+  "format": "cedar-json/1",
+  "sources": {
+    "policies/billing.cedar": "dd7d045ecc9826dcb50d1491ce2e65e3493496de0e0486910e8a8f97f77587f4",
+    "policies/crm.cedar": "e334c3a8b405f072756bc4815a22b000cb9b6fb1ded04b92bce8f99c4546b082",
+    "policies/delegation.cedar": "8ea2883e5eb44a3827ddeebc5f2df5fa5f5616c8af69f9568bdf4bbf91a6ef77",
+    "policies/hr.cedar": "42e38398da9cb85fd59ff8ce810d1542e0eceb4fde08724977d89d8104b3a984",
+    "policies/roles.cedar": "b07fd8f04732e47ae09d1a6a105226723690a182c99d5d786a27525716c2a816"
+  },
+  "policies": {
+    "auditor-role-is-read-only": {
+      "effect": "forbid",
+      "principal": {
+        "op": "All"
+      },
+      "action": {
+        "op": "All"
+      },
+      "resource": {
+        "op": "All"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "&&": {
+                  "left": {
+                    "&&": {
+                      "left": {
+                        "has": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "right": {
+                        "==": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    "Var": "context"
+                                  },
+                                  "attr": "iam"
+                                }
+                              },
+                              "attr": "role"
+                            }
+                          },
+                          "right": {
+                            "Value": "auditor"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    "!=": {
+                      "left": {
+                        "Var": "action"
+                      },
+                      "right": {
+                        "Value": {
+                          "__entity": {
+                            "type": "Action",
+                            "id": "read"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "!=": {
+                  "left": {
+                    "Var": "action"
+                  },
+                  "right": {
+                    "Value": {
+                      "__entity": {
+                        "type": "Action",
+                        "id": "delegate"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "auditor-role-is-read-only"
+      }
+    },
+    "compliance-read-customer": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Customer"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "in": {
+              "left": {
+                ".": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "context"
+                      },
+                      "attr": "iam"
+                    }
+                  },
+                  "attr": "user"
+                }
+              },
+              "right": {
+                "Value": {
+                  "__entity": {
+                    "type": "Group",
+                    "id": "compliance"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "compliance-read-customer"
+      }
+    },
+    "compliance-read-customer-fields": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Field"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "resource"
+                      },
+                      "attr": "resource"
+                    }
+                  },
+                  "right": {
+                    "Value": "crm.customer"
+                  }
+                }
+              },
+              "right": {
+                "in": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "user"
+                    }
+                  },
+                  "right": {
+                    "Value": {
+                      "__entity": {
+                        "type": "Group",
+                        "id": "compliance"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "compliance-read-customer-fields"
+      }
+    },
+    "compliance-read-salary": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Salary"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "in": {
+              "left": {
+                ".": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "context"
+                      },
+                      "attr": "iam"
+                    }
+                  },
+                  "attr": "user"
+                }
+              },
+              "right": {
+                "Value": {
+                  "__entity": {
+                    "type": "Group",
+                    "id": "compliance"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "compliance-read-salary"
+      }
+    },
+    "delegate-compliance": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "Group",
+          "id": "compliance"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "delegate-compliance"
+      }
+    },
+    "delegate-helper-chain": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "refund-helper"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "summarizer"
+        }
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "delegate-helper-chain"
+      }
+    },
+    "delegate-support-bot-helpers": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "All"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "contains": {
+              "left": {
+                "Set": [
+                  {
+                    "Value": {
+                      "__entity": {
+                        "type": "Agent",
+                        "id": "refund-helper"
+                      }
+                    }
+                  },
+                  {
+                    "Value": {
+                      "__entity": {
+                        "type": "Agent",
+                        "id": "summarizer"
+                      }
+                    }
+                  }
+                ]
+              },
+              "right": {
+                "Var": "resource"
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "delegate-support-bot-helpers"
+      }
+    },
+    "delegate-support-users": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "Group",
+          "id": "support"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "delegate-support-users"
+      }
+    },
+    "frozen-salary-records": {
+      "effect": "forbid",
+      "principal": {
+        "op": "All"
+      },
+      "action": {
+        "op": "All"
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Salary"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            ".": {
+              "left": {
+                "Var": "resource"
+              },
+              "attr": "frozen"
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "frozen-salary-records"
+      }
+    },
+    "no-long-lived-subagents": {
+      "effect": "forbid",
+      "principal": {
+        "op": "is",
+        "entity_type": "Agent"
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "delegate"
+        }
+      },
+      "resource": {
+        "op": "All"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            ">": {
+              "left": {
+                ".": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "context"
+                      },
+                      "attr": "requested"
+                    }
+                  },
+                  "attr": "ttl"
+                }
+              },
+              "right": {
+                "Value": 600
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "no-long-lived-subagents"
+      }
+    },
+    "no-refund-to-yourself": {
+      "effect": "forbid",
+      "principal": {
+        "op": "All"
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "create"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Refund"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "has": {
+                  "left": {
+                    "Var": "resource"
+                  },
+                  "attr": "customer_owner"
+                }
+              },
+              "right": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "resource"
+                      },
+                      "attr": "customer_owner"
+                    }
+                  },
+                  "right": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "user_id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "no-refund-to-yourself"
+      }
+    },
+    "refund-fields": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "create"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Field"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "resource"
+                      },
+                      "attr": "resource"
+                    }
+                  },
+                  "right": {
+                    "Value": "billing.refund"
+                  }
+                }
+              },
+              "right": {
+                "!": {
+                  "arg": {
+                    "contains": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "resource"
+                          },
+                          "attr": "labels"
+                        }
+                      },
+                      "right": {
+                        "Value": "internal"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "refund-fields"
+      }
+    },
+    "refund-large-needs-approval": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "create"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Refund"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "&&": {
+                  "left": {
+                    "&&": {
+                      "left": {
+                        "&&": {
+                          "left": {
+                            "in": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    ".": {
+                                      "left": {
+                                        "Var": "context"
+                                      },
+                                      "attr": "iam"
+                                    }
+                                  },
+                                  "attr": "user"
+                                }
+                              },
+                              "right": {
+                                "Value": {
+                                  "__entity": {
+                                    "type": "Group",
+                                    "id": "support"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "right": {
+                            "has": {
+                              "left": {
+                                "Var": "context"
+                              },
+                              "attr": "spend"
+                            }
+                          }
+                        }
+                      },
+                      "right": {
+                        "==": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    "Var": "context"
+                                  },
+                                  "attr": "spend"
+                                }
+                              },
+                              "attr": "currency"
+                            }
+                          },
+                          "right": {
+                            "Value": "EUR"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    ">": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                "Var": "context"
+                              },
+                              "attr": "spend"
+                            }
+                          },
+                          "attr": "amount"
+                        }
+                      },
+                      "right": {
+                        "Value": 10000
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "<=": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "spend"
+                        }
+                      },
+                      "attr": "amount"
+                    }
+                  },
+                  "right": {
+                    "Value": 20000
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "refund-large-needs-approval",
+        "require_approval": "refund-over-100-eur"
+      }
+    },
+    "refund-small": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "create"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Refund"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "&&": {
+                  "left": {
+                    "&&": {
+                      "left": {
+                        "in": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    "Var": "context"
+                                  },
+                                  "attr": "iam"
+                                }
+                              },
+                              "attr": "user"
+                            }
+                          },
+                          "right": {
+                            "Value": {
+                              "__entity": {
+                                "type": "Group",
+                                "id": "support"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "right": {
+                        "has": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "spend"
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    "==": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                "Var": "context"
+                              },
+                              "attr": "spend"
+                            }
+                          },
+                          "attr": "currency"
+                        }
+                      },
+                      "right": {
+                        "Value": "EUR"
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "<=": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "spend"
+                        }
+                      },
+                      "attr": "amount"
+                    }
+                  },
+                  "right": {
+                    "Value": 10000
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "refund-small",
+        "rate_limit": "3/60"
+      }
+    },
+    "secret-fields-compliance-only": {
+      "effect": "forbid",
+      "principal": {
+        "op": "All"
+      },
+      "action": {
+        "op": "All"
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Field"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "contains": {
+              "left": {
+                ".": {
+                  "left": {
+                    "Var": "resource"
+                  },
+                  "attr": "labels"
+                }
+              },
+              "right": {
+                "Value": "secret"
+              }
+            }
+          }
+        },
+        {
+          "kind": "unless",
+          "body": {
+            "&&": {
+              "left": {
+                "in": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "user"
+                    }
+                  },
+                  "right": {
+                    "Value": {
+                      "__entity": {
+                        "type": "Group",
+                        "id": "compliance"
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "iam"
+                        }
+                      },
+                      "attr": "depth"
+                    }
+                  },
+                  "right": {
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "secret-fields-compliance-only"
+      }
+    },
+    "supervisor-role-large-refund": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "create"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Refund"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "&&": {
+                  "left": {
+                    "&&": {
+                      "left": {
+                        "&&": {
+                          "left": {
+                            "==": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    ".": {
+                                      "left": {
+                                        "Var": "context"
+                                      },
+                                      "attr": "iam"
+                                    }
+                                  },
+                                  "attr": "role"
+                                }
+                              },
+                              "right": {
+                                "Value": "supervisor"
+                              }
+                            }
+                          },
+                          "right": {
+                            "has": {
+                              "left": {
+                                "Var": "context"
+                              },
+                              "attr": "spend"
+                            }
+                          }
+                        }
+                      },
+                      "right": {
+                        "==": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                ".": {
+                                  "left": {
+                                    "Var": "context"
+                                  },
+                                  "attr": "spend"
+                                }
+                              },
+                              "attr": "currency"
+                            }
+                          },
+                          "right": {
+                            "Value": "EUR"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    ">": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                "Var": "context"
+                              },
+                              "attr": "spend"
+                            }
+                          },
+                          "attr": "amount"
+                        }
+                      },
+                      "right": {
+                        "Value": 20000
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "<=": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "context"
+                          },
+                          "attr": "spend"
+                        }
+                      },
+                      "attr": "amount"
+                    }
+                  },
+                  "right": {
+                    "Value": 50000
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "supervisor-role-large-refund"
+      }
+    },
+    "supervisors-approve": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "Group",
+          "id": "supervisors"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "approve"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Agent"
+      },
+      "conditions": [],
+      "annotations": {
+        "id": "supervisors-approve"
+      }
+    },
+    "support-read-customer": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Customer"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "in": {
+              "left": {
+                ".": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "context"
+                      },
+                      "attr": "iam"
+                    }
+                  },
+                  "attr": "user"
+                }
+              },
+              "right": {
+                "Value": {
+                  "__entity": {
+                    "type": "Group",
+                    "id": "support"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "support-read-customer",
+        "row_filter": "region == context.iam.user_attrs.region"
+      }
+    },
+    "support-read-customer-fields": {
+      "effect": "permit",
+      "principal": {
+        "op": "in",
+        "entity": {
+          "type": "AgentGroup",
+          "id": "support-agents"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "read"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Field"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "&&": {
+                  "left": {
+                    "==": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "resource"
+                          },
+                          "attr": "resource"
+                        }
+                      },
+                      "right": {
+                        "Value": "crm.customer"
+                      }
+                    }
+                  },
+                  "right": {
+                    "!": {
+                      "arg": {
+                        "contains": {
+                          "left": {
+                            ".": {
+                              "left": {
+                                "Var": "resource"
+                              },
+                              "attr": "labels"
+                            }
+                          },
+                          "right": {
+                            "Value": "secret"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "!": {
+                  "arg": {
+                    "contains": {
+                      "left": {
+                        ".": {
+                          "left": {
+                            "Var": "resource"
+                          },
+                          "attr": "labels"
+                        }
+                      },
+                      "right": {
+                        "Value": "internal"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "support-read-customer-fields"
+      }
+    },
+    "support-update-contact-fields": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "update"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Field"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "&&": {
+              "left": {
+                "==": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "resource"
+                      },
+                      "attr": "resource"
+                    }
+                  },
+                  "right": {
+                    "Value": "crm.customer"
+                  }
+                }
+              },
+              "right": {
+                "contains": {
+                  "left": {
+                    "Set": [
+                      {
+                        "Value": "email"
+                      },
+                      {
+                        "Value": "phone"
+                      }
+                    ]
+                  },
+                  "right": {
+                    ".": {
+                      "left": {
+                        "Var": "resource"
+                      },
+                      "attr": "name"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "support-update-contact-fields"
+      }
+    },
+    "support-update-customer": {
+      "effect": "permit",
+      "principal": {
+        "op": "==",
+        "entity": {
+          "type": "Agent",
+          "id": "support-bot"
+        }
+      },
+      "action": {
+        "op": "==",
+        "entity": {
+          "type": "Action",
+          "id": "update"
+        }
+      },
+      "resource": {
+        "op": "is",
+        "entity_type": "Customer"
+      },
+      "conditions": [
+        {
+          "kind": "when",
+          "body": {
+            "in": {
+              "left": {
+                ".": {
+                  "left": {
+                    ".": {
+                      "left": {
+                        "Var": "context"
+                      },
+                      "attr": "iam"
+                    }
+                  },
+                  "attr": "user"
+                }
+              },
+              "right": {
+                "Value": {
+                  "__entity": {
+                    "type": "Group",
+                    "id": "support"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "annotations": {
+        "id": "support-update-customer"
+      }
+    }
+  }
+}

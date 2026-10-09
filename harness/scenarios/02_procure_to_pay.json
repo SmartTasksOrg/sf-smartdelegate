@@ -1,0 +1,636 @@
+{
+ "id": "02_procure_to_pay",
+ "name": "Procure-to-pay with separation of duties",
+ "description": "A buyer's agent raises a purchase order, a procurement manager's agent approves it, a finance clerk's agent matches the invoice and pays after a finance approver releases the amount. Whoever requested an order can neither approve nor pay it. Vendor bank details are visible to treasury only.",
+ "units": [
+  "procurement",
+  "finance"
+ ],
+ "cast": {
+  "buyer": {
+   "group": "procurement",
+   "not_group": "procurement-approvers"
+  },
+  "manager": {
+   "group": "procurement-approvers"
+  },
+  "clerk": {
+   "group": "finance-clerks"
+  },
+  "fin_approver": {
+   "group": "finance-approvers"
+  },
+  "treasurer": {
+   "group": "treasury"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "buyer",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "buyer",
+   "task": "po-{n}",
+   "save": "buying",
+   "expect": "ok",
+   "why": "A buyer lends the procurement orchestrator the buyer role for this order."
+  },
+  {
+   "id": "s2",
+   "actor": "procurement-orchestrator",
+   "op": "narrow",
+   "token": "buying",
+   "to": "po-drafter",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "procurement.po/po-{n}",
+     "procurement.vendor/*"
+    ]
+   },
+   "save": "drafting",
+   "expect": "ok",
+   "why": "The orchestrator hands the drafting to the PO drafter: this order, and vendors to read."
+  },
+  {
+   "id": "s3",
+   "actor": "po-drafter",
+   "op": "call",
+   "token": "drafting",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Acme Tooling",
+    "region": "EU",
+    "status": "active",
+    "contact_email": "ap@acme.example",
+    "tax_id": "DE123456789",
+    "risk_score": 2,
+    "bank": {
+     "iban": "DE89370400440532013000",
+     "bic": "COBADEFFXXX"
+    },
+    "onboarded_by": "{buyer}"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "bank.iban",
+     "bank.bic",
+     "tax_id",
+     "risk_score"
+    ],
+    "visible": [
+     "name",
+     "status"
+    ]
+   },
+   "why": "Procurement never sees bank details or the tax id; a sub-agent does not see the internal risk score either."
+  },
+  {
+   "id": "s4",
+   "actor": "po-drafter",
+   "op": "call",
+   "token": "drafting",
+   "action": "create",
+   "resource": "procurement.po/po-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "po-{n}",
+    "vendor_id": "v-{n}",
+    "cost_center": "{buyer.cost_center}",
+    "requested_by": "{buyer}",
+    "status": "draft",
+    "amount": 250000,
+    "currency": "{clerk.currency}",
+    "items": [
+     {
+      "sku": "TL-100",
+      "qty": 50,
+      "unit_price": 5000
+     }
+    ]
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The drafter raises the purchase order for 2,500.00."
+  },
+  {
+   "id": "s5",
+   "actor": "po-drafter",
+   "op": "call",
+   "token": "drafting",
+   "action": "create",
+   "resource": "procurement.po/po-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "po-{n}",
+    "approved_by": "{manager}"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "The drafter cannot write who approved the order."
+  },
+  {
+   "id": "s6",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "buying",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}",
+   "attrs": {
+    "requested_by": "{buyer}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The buyer role carries no approve action: the requester's agent cannot approve."
+  },
+  {
+   "id": "s7",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "buying",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{buyer}",
+    "approved_by": "{manager}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 250000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "The buyer role does not cover payments: the requester's agent cannot pay."
+  },
+  {
+   "id": "s8",
+   "actor": "manager",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "po-approver",
+   "task": "po-{n}",
+   "save": "approving",
+   "expect": "ok",
+   "why": "A procurement manager lends the orchestrator the po-approver role."
+  },
+  {
+   "id": "s9",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "approving",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}",
+   "attrs": {
+    "requested_by": "{buyer}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager did not raise this order, so the manager's agent may approve it."
+  },
+  {
+   "id": "s10",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "approving",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "An approval that does not say who raised the order is refused."
+  },
+  {
+   "id": "s11",
+   "actor": "manager",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "buyer",
+   "task": "po-{n}-own",
+   "save": "manager_buying",
+   "expect": "ok",
+   "why": "A manager is also a member of procurement and may raise an order of their own."
+  },
+  {
+   "id": "s12",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "manager_buying",
+   "action": "create",
+   "resource": "procurement.po/po-{n}-own",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "po-{n}-own",
+    "requested_by": "{manager}",
+    "amount": 90000,
+    "currency": "{clerk.currency}"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The manager raises an order."
+  },
+  {
+   "id": "s13",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "approving",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}-own",
+   "attrs": {
+    "requested_by": "{manager}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Separation of duties: the manager cannot approve the order the manager raised."
+  },
+  {
+   "id": "s14",
+   "actor": "procurement-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "pay purchase order",
+    "po": "po-{n}",
+    "invoice": "inv-{n}",
+    "requested_by": "{buyer}",
+    "approved_by": "{manager}"
+   },
+   "tokens": null,
+   "why": "The approved order goes to finance as a work item."
+  },
+  {
+   "id": "s15",
+   "actor": "clerk",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "ap-clerk",
+   "task": "pay-{n}",
+   "save": "paying",
+   "expect": "ok",
+   "why": "An accounts payable clerk lends the finance orchestrator the ap-clerk role."
+  },
+  {
+   "id": "s16",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "paying",
+   "to": "invoice-matcher",
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "billing.invoice/inv-{n}",
+     "procurement.po/po-{n}"
+    ]
+   },
+   "save": "matching",
+   "expect": "ok",
+   "why": "The orchestrator hands the three-way match to the invoice matcher: read the order, update the invoice."
+  },
+  {
+   "id": "s17",
+   "actor": "invoice-matcher",
+   "op": "call",
+   "token": "matching",
+   "action": "read",
+   "resource": "procurement.po/po-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "po-{n}",
+    "vendor_id": "v-{n}",
+    "cost_center": "{buyer.cost_center}",
+    "requested_by": "{buyer}",
+    "status": "draft",
+    "amount": 250000,
+    "currency": "{clerk.currency}",
+    "items": [
+     {
+      "sku": "TL-100",
+      "qty": 50,
+      "unit_price": 5000
+     }
+    ]
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "requested_by"
+    ]
+   },
+   "why": "The matcher reads the order."
+  },
+  {
+   "id": "s18",
+   "actor": "invoice-matcher",
+   "op": "call",
+   "token": "matching",
+   "action": "update",
+   "resource": "billing.invoice/inv-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "status": "matched",
+    "po_id": "po-{n}"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The matcher marks the invoice matched."
+  },
+  {
+   "id": "s19",
+   "actor": "invoice-matcher",
+   "op": "call",
+   "token": "matching",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{buyer}",
+    "approved_by": "{manager}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 250000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The matcher's token carries no create: it cannot pay."
+  },
+  {
+   "id": "s20",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "paying",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{buyer}",
+    "approved_by": "{manager}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 250000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "2,500.00 is over 1,000.00: a finance approver must release it."
+  },
+  {
+   "id": "s21",
+   "actor": "clerk",
+   "op": "approve",
+   "request": "s20",
+   "expect": "error:self_approval",
+   "why": "The clerk whose agent asks cannot release the payment."
+  },
+  {
+   "id": "s22",
+   "actor": "buyer",
+   "op": "approve",
+   "request": "s20",
+   "expect": "error:approval_denied",
+   "why": "The buyer is not a finance approver."
+  },
+  {
+   "id": "s23",
+   "actor": "fin_approver",
+   "op": "approve",
+   "request": "s20",
+   "expect": "ok",
+   "why": "A finance approver releases the payment."
+  },
+  {
+   "id": "s24",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "paying",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{buyer}",
+    "approved_by": "{manager}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 250000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Released: the payment is posted."
+  },
+  {
+   "id": "s25",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "paying",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}-b",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{buyer}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 5000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "A payment that names no approver of the order is refused."
+  },
+  {
+   "id": "s26",
+   "actor": "clerk",
+   "op": "delegate",
+   "agent": "procurement-orchestrator",
+   "role": "requisitioner",
+   "task": "req-{n}",
+   "save": "clerk_requisition",
+   "expect": "ok",
+   "why": "Any employee can raise a requisition; here the finance clerk does."
+  },
+  {
+   "id": "s27",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "clerk_requisition",
+   "action": "create",
+   "resource": "procurement.po/po-{n}-req",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "po-{n}-req",
+    "requested_by": "{clerk}",
+    "amount": 5000,
+    "currency": "{clerk.currency}"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The clerk's requisition is raised."
+  },
+  {
+   "id": "s28",
+   "actor": "procurement-orchestrator",
+   "op": "call",
+   "token": "approving",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}-req",
+   "attrs": {
+    "requested_by": "{clerk}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The procurement manager approves the clerk's requisition."
+  },
+  {
+   "id": "s29",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "paying",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}-req",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{clerk}",
+    "approved_by": "{manager}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 5000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Separation of duties: the clerk requested this order, so the clerk's agent cannot pay it."
+  },
+  {
+   "id": "s30",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "paying",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Acme Tooling",
+    "region": "EU",
+    "status": "active",
+    "contact_email": "ap@acme.example",
+    "tax_id": "DE123456789",
+    "risk_score": 2,
+    "bank": {
+     "iban": "DE89370400440532013000",
+     "bic": "COBADEFFXXX"
+    },
+    "onboarded_by": "{buyer}"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "bank.iban",
+     "bank.bic",
+     "tax_id"
+    ],
+    "visible": [
+     "name",
+     "risk_score"
+    ]
+   },
+   "why": "Accounts payable sees the vendor without bank details."
+  },
+  {
+   "id": "s31",
+   "actor": "treasurer",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "treasury",
+   "task": "treasury-{n}",
+   "save": "treasury_task",
+   "expect": "ok",
+   "why": "A treasury analyst lends the finance orchestrator the treasury role."
+  },
+  {
+   "id": "s32",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "treasury_task",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Acme Tooling",
+    "region": "EU",
+    "status": "active",
+    "contact_email": "ap@acme.example",
+    "tax_id": "DE123456789",
+    "risk_score": 2,
+    "bank": {
+     "iban": "DE89370400440532013000",
+     "bic": "COBADEFFXXX"
+    },
+    "onboarded_by": "{buyer}"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "bank.iban",
+     "bank.bic",
+     "tax_id"
+    ]
+   },
+   "why": "Treasury is the one role that sees the account number."
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+{
+  "bundle_dir": "/bundle",
+  "state_dir": "/state",
+  "listen": "0.0.0.0:8181",
+  "issuer": "smartdelegate://live",
+  "mode": "enforce",
+  "max_depth": 3
+}

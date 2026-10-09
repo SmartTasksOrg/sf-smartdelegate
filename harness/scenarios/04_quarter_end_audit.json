@@ -1,0 +1,541 @@
+{
+ "id": "04_quarter_end_audit",
+ "name": "Quarter-end audit",
+ "description": "An internal auditor's agents read records of every unit. They can write nowhere and never receive card numbers, bank accounts, other secrets, salary figures or HR-confidential fields. A sampler and its evidence collector get narrower slices.",
+ "units": [
+  "compliance",
+  "support",
+  "finance",
+  "hr",
+  "sales",
+  "procurement",
+  "it-ops"
+ ],
+ "cast": {
+  "auditor": {
+   "group": "compliance"
+  },
+  "outsider": {
+   "group": "finance-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "auditor",
+   "op": "delegate",
+   "agent": "compliance-orchestrator",
+   "role": "auditor",
+   "task": "audit-{n}",
+   "save": "audit",
+   "expect": "ok",
+   "why": "An auditor lends the compliance orchestrator the auditor role for the quarter-end audit."
+  },
+  {
+   "id": "s2",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "US"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "US",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "card.number"
+    ],
+    "visible": [
+     "name",
+     "notes",
+     "card.last4"
+    ]
+   },
+   "why": "The auditor reads a customer of any region; the card number is redacted."
+  },
+  {
+   "id": "s3",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "pay-{n}",
+    "kind": "po",
+    "amount": 250000,
+    "currency": "EUR",
+    "status": "paid",
+    "requested_by": "uma",
+    "approved_by": "wendy",
+    "paid_by": "gina",
+    "beneficiary": {
+     "name": "Acme Tooling",
+     "iban": "DE89370400440532013000"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "beneficiary.iban"
+    ],
+    "visible": [
+     "amount",
+     "beneficiary.name"
+    ]
+   },
+   "why": "Payments are readable; the beneficiary's account number is redacted."
+  },
+  {
+   "id": "s4",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "procurement.vendor/v-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "v-{n}",
+    "name": "Acme Tooling",
+    "region": "EU",
+    "status": "active",
+    "contact_email": "ap@acme.example",
+    "tax_id": "DE123456789",
+    "risk_score": 2,
+    "bank": {
+     "iban": "DE89370400440532013000",
+     "bic": "COBADEFFXXX"
+    },
+    "onboarded_by": "uma"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "bank.iban",
+     "bank.bic",
+     "tax_id"
+    ],
+    "visible": [
+     "name",
+     "risk_score"
+    ]
+   },
+   "why": "Vendors are readable without bank details or tax id."
+  },
+  {
+   "id": "s5",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "name": "Nora Quist",
+    "job_title": "Account executive",
+    "national_id": "AB123456C",
+    "bank_account": "DE02120300000000202051",
+    "emergency_contact": "partner"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "national_id",
+     "bank_account",
+     "emergency_contact"
+    ],
+    "visible": [
+     "name",
+     "job_title"
+    ]
+   },
+   "why": "Employees are readable without national id, bank account or emergency contact."
+  },
+  {
+   "id": "s6",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "employee_id": "emp-{n}",
+    "currency": "EUR",
+    "grade": "L3",
+    "base": 5200000,
+    "bonus": 400000,
+    "notes": "x"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "base",
+     "bonus",
+     "notes"
+    ],
+    "visible": [
+     "grade"
+    ]
+   },
+   "why": "The auditor sees that a salary record exists and its grade, not the figures."
+  },
+  {
+   "id": "s7",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "je-{n}",
+    "period": "2026-09",
+    "account": "6100",
+    "amount": 120000,
+    "currency": "EUR",
+    "memo": "accrual",
+    "posted_by": "jonas",
+    "approved_by": "ines",
+    "status": "posted"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "memo",
+     "posted_by"
+    ]
+   },
+   "why": "Ledger entries are readable in full."
+  },
+  {
+   "id": "s8",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "it.account/acc-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "acc-{n}",
+    "username": "nora.quist",
+    "status": "active",
+    "mfa_secret": "JBSWY3DPEHPK3PXP",
+    "last_login": "2026-09-30"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "mfa_secret"
+    ],
+    "visible": [
+     "username",
+     "last_login"
+    ]
+   },
+   "why": "Accounts are readable without the MFA seed."
+  },
+  {
+   "id": "s9",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "APAC"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "region": "APAC",
+    "status": "signed",
+    "clauses": [
+     {
+      "title": "Liability",
+      "text": "capped"
+     }
+    ],
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "pricing.margin_pct"
+    ],
+    "visible": [
+     "pricing.list_price",
+     "clauses"
+    ]
+   },
+   "why": "Contracts are readable with prices; the margin is a secret."
+  },
+  {
+   "id": "s10",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "update",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "US"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The auditor role carries read only: no update."
+  },
+  {
+   "id": "s11",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}-x",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "uma",
+    "approved_by": "wendy"
+   },
+   "context": {
+    "spend": {
+     "currency": "EUR",
+     "amount": 100
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "No payment."
+  },
+  {
+   "id": "s12",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "approve",
+   "resource": "procurement.po/po-{n}",
+   "attrs": {
+    "requested_by": "uma"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "No approval."
+  },
+  {
+   "id": "s13",
+   "actor": "compliance-orchestrator",
+   "op": "narrow",
+   "token": "audit",
+   "to": "audit-sampler",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "finance.payment/*",
+     "procurement.po/*",
+     "crm.customer/*"
+    ]
+   },
+   "save": "sampling",
+   "expect": "ok",
+   "why": "The orchestrator hands a sample to the audit sampler: payments, orders and customers."
+  },
+  {
+   "id": "s14",
+   "actor": "audit-sampler",
+   "op": "call",
+   "token": "sampling",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "US"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "US",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "notes",
+     "card.number",
+     "addresses[].geo"
+    ],
+    "visible": [
+     "name"
+    ]
+   },
+   "why": "The sampler is a sub-agent: internal notes stop at the orchestrator."
+  },
+  {
+   "id": "s15",
+   "actor": "audit-sampler",
+   "op": "call",
+   "token": "sampling",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "The sample does not include HR records."
+  },
+  {
+   "id": "s16",
+   "actor": "audit-sampler",
+   "op": "narrow",
+   "token": "sampling",
+   "to": "evidence-collector",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "finance.payment/pay-{n}"
+    ]
+   },
+   "save": "evidence",
+   "expect": "ok",
+   "why": "The sampler hands one payment to the evidence collector, the third level."
+  },
+  {
+   "id": "s17",
+   "actor": "evidence-collector",
+   "op": "call",
+   "token": "evidence",
+   "action": "read",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "pay-{n}",
+    "amount": 250000,
+    "beneficiary": {
+     "name": "Acme Tooling",
+     "iban": "DE89370400440532013000"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "beneficiary.iban"
+    ],
+    "visible": [
+     "amount"
+    ]
+   },
+   "why": "The collector reads its one payment."
+  },
+  {
+   "id": "s18",
+   "actor": "evidence-collector",
+   "op": "call",
+   "token": "evidence",
+   "action": "read",
+   "resource": "finance.payment/pay-{n}-other",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "And no other payment."
+  },
+  {
+   "id": "s19",
+   "actor": "auditor",
+   "op": "delegate",
+   "agent": "compliance-orchestrator",
+   "role": "auditor",
+   "task": "audit-{n}-wide",
+   "save": null,
+   "cap": {
+    "actions": [
+     "read",
+     "update"
+    ],
+    "resources": [
+     "*"
+    ]
+   },
+   "expect": "error:role_exceeded",
+   "why": "An auditor cannot ask for more than the auditor role holds."
+  },
+  {
+   "id": "s20",
+   "actor": "outsider",
+   "op": "delegate",
+   "agent": "compliance-orchestrator",
+   "role": "auditor",
+   "task": "audit-{n}",
+   "save": null,
+   "expect": "error:role_not_held",
+   "why": "A finance manager does not hold the auditor role."
+  }
+ ]
+}

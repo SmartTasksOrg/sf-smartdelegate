@@ -1,0 +1,35 @@
+{
+  "name": "sf-smartdelegate",
+  "version": "0.3.0",
+  "description": "SmartDelegate for Node.js: native engine (capability tokens, Cedar policy from compiled JSON, field masking, budgets, approval, audit), REST daemon and REST client. No dependencies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "lib/index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./lib/index.mjs"
+    },
+    "./client": {
+      "types": "./index.d.ts",
+      "default": "./lib/client.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "smartdelegate-node": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

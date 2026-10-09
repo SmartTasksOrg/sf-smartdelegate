@@ -1,0 +1,304 @@
+{
+ "id": "09_handoff_done_wrong",
+ "name": "Cross-unit handoff done wrong: the token is passed along",
+ "description": "A sales orchestrator hands a deal to finance and passes its capability token with the work item, instead of letting a finance human delegate. The scenario records what the system prevents and what it does not. A capability token is a bearer token: whoever holds it can use it, as the agent it names, within its bounds, until it is revoked or expires.",
+ "units": [
+  "sales",
+  "finance",
+  "it-ops"
+ ],
+ "cast": {
+  "rep": {
+   "group": "sales",
+   "not_group": "sales-managers"
+  },
+  "clerk": {
+   "group": "finance-clerks"
+  },
+  "admin": {
+   "group": "it-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "rep",
+   "op": "delegate",
+   "agent": "sales-orchestrator",
+   "role": "sales-rep",
+   "task": "deal-{n}",
+   "save": "sales_token",
+   "expect": "ok",
+   "why": "An account executive lends the sales orchestrator the sales-rep role for this deal."
+  },
+  {
+   "id": "s2",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "o-{n}",
+    "customer_id": "c-{n}",
+    "region": "{rep.region}",
+    "owner": "{rep}",
+    "stage": "won",
+    "amount": 12000000,
+    "discount_pct": 15,
+    "notes": "invoice on signature"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "notes"
+    ]
+   },
+   "why": "The sales orchestrator reads the deal."
+  },
+  {
+   "id": "s3",
+   "actor": "sales-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "invoice the won deal",
+    "opportunity": "o-{n}"
+   },
+   "tokens": [
+    "sales_token"
+   ],
+   "why": "WRONG: the sales orchestrator passes its own token to the finance orchestrator together with the work item."
+  },
+  {
+   "id": "s4",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "o-{n}",
+    "customer_id": "c-{n}",
+    "region": "{rep.region}",
+    "owner": "{rep}",
+    "stage": "won",
+    "amount": 12000000,
+    "discount_pct": 15,
+    "notes": "invoice on signature"
+   },
+   "strict": null,
+   "audit": {
+    "user": "{rep}",
+    "chain": [
+     "sales-orchestrator"
+    ],
+    "role": "sales-rep",
+    "task": "deal-{n}"
+   },
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "notes"
+    ]
+   },
+   "why": "NOT PREVENTED: the finance orchestrator presents the sales token and the read is allowed. Nothing ties a token to the process that presents it (docs/LIMITATIONS.md, section 5). The decision and the audit record name the token's own chain, sales-orchestrator, not the agent that used it."
+  },
+  {
+   "id": "s5",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "create",
+   "resource": "finance.payment/pay-{n}",
+   "attrs": {
+    "kind": "po",
+    "requested_by": "{rep}",
+    "approved_by": "{clerk}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{clerk.currency}",
+     "amount": 5000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "PREVENTED: the token's capability still binds. It is a sales token; it does not cover payments, whoever holds it."
+  },
+  {
+   "id": "s6",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "read",
+   "resource": "billing.invoice/inv-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "PREVENTED: nor finance's own invoices."
+  },
+  {
+   "id": "s7",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}-far",
+   "attrs": {
+    "region": "{rep.other_region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "PREVENTED: policy still binds. The rep's region rule applies to whoever presents the token."
+  },
+  {
+   "id": "s8",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "sales_token",
+   "to": "finance-orchestrator",
+   "cap": null,
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "PREVENTED: the finance orchestrator cannot exchange the sales token for one in its own name. The delegation policy lets the sales orchestrator hand work to sales specialists only."
+  },
+  {
+   "id": "s9",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "sales_token",
+   "to": "invoice-matcher",
+   "cap": null,
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "PREVENTED: nor for one of finance's specialists."
+  },
+  {
+   "id": "s10",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "sales_token",
+   "to": "contract-summarizer",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "sales.opportunity/o-{n}"
+    ]
+   },
+   "save": "minted_by_holder",
+   "expect": "ok",
+   "why": "NOT PREVENTED: the exchange needs nothing but the token itself, so the holder can obtain a sub-agent token for any agent the sales orchestrator could have handed work to. That token is again a sales token: narrower than its parent, with the sales chain."
+  },
+  {
+   "id": "s11",
+   "actor": "clerk",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "ap-clerk",
+   "task": "invoice-{n}",
+   "save": "finance_token",
+   "expect": "ok",
+   "why": "RIGHT: a finance clerk lends the finance orchestrator their own role for the work item."
+  },
+  {
+   "id": "s12",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_token",
+   "action": "read",
+   "resource": "billing.invoice/inv-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "inv-{n}",
+    "amount": 12000000,
+    "currency": "EUR",
+    "status": "draft"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount"
+    ]
+   },
+   "why": "Under its own token the finance orchestrator does finance work."
+  },
+  {
+   "id": "s13",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "finance_token",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "And has no access to the sales record it was never meant to open."
+  },
+  {
+   "id": "s14",
+   "actor": "admin",
+   "op": "revoke_token",
+   "token": "sales_token",
+   "expect": "ok",
+   "why": "The leak is noticed and the sales token is revoked."
+  },
+  {
+   "id": "s15",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "sales_token",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_revoked",
+   "why": "The passed-along token is dead for everyone who holds a copy."
+  },
+  {
+   "id": "s16",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "minted_by_holder",
+   "action": "read",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{rep.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "stolen": true,
+   "expect": "deny:token_revoked",
+   "why": "And so is the sub-agent token the holder obtained from it."
+  }
+ ]
+}

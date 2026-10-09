@@ -1,0 +1,13 @@
+{
+  "upstreams": {
+    "crm": {"base_url": "http://127.0.0.1:9000", "headers": {"X-Api-Key": "env:CRM_API_KEY"}}
+  },
+  "routes": [
+    {"upstream": "crm", "method": "GET", "path": "/customers/{id}", "action": "read", "resource": "crm.customer", "id": "{id}"},
+    {"upstream": "crm", "method": "GET", "path": "/customers", "action": "read", "resource": "crm.customer", "data_key": "items", "keep": ["next"], "query": ["cursor", "limit"]},
+    {"upstream": "crm", "method": "PATCH", "path": "/customers/{id}", "action": "update", "resource": "crm.customer", "id": "{id}"},
+    {"upstream": "crm", "method": "GET", "path": "/report", "action": "read", "resource": "crm.customer"},
+    {"upstream": "crm", "method": "POST", "path": "/refunds", "action": "create", "resource": "billing.refund",
+     "spend": {"currency": "body.currency", "amount": "body.amount"}}
+  ]
+}

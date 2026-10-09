@@ -1,0 +1,16 @@
+{
+  "server": "company",
+  "allow_methods": [],
+  "tools": {
+    "get_customer": {"action": "read", "resource": "crm.customer", "id": "args.customer_id", "attrs": {"tenant": "kestrel"}, "lookup": {"tool": "get_customer", "arguments": {"customer_id": "args.customer_id"}}, "attrs_from_record": {"region": "region"}},
+    "list_customers": {"action": "read", "resource": "crm.customer", "attrs": {"tenant": "kestrel"}, "attrs_from_request": {"region": "args.region"}},
+    "update_customer": {"action": "update", "resource": "crm.customer", "id": "args.customer_id", "input": "args.changes", "attrs": {"tenant": "kestrel"}, "lookup": {"tool": "get_customer", "arguments": {"customer_id": "args.customer_id"}}, "attrs_from_record": {"region": "region"}},
+    "update_customer_as_claimed": {"action": "update", "resource": "crm.customer", "id": "args.customer_id", "input": "args.changes", "attrs": {"tenant": "kestrel"}, "attrs_from_request": {"region": "args.region"}},
+    "create_refund": {"action": "create", "resource": "billing.refund", "id": "args.refund.id", "input": "args.refund", "attrs": {"tenant": "kestrel"}, "lookup": {"tool": "get_customer", "arguments": {"customer_id": "args.refund.customer_id"}}, "attrs_from_record": {"region": "region"}, "spend": {"currency": "args.refund.currency", "amount": "args.refund.amount"}},
+    "get_vendor": {"action": "read", "resource": "procurement.vendor", "id": "args.vendor_id", "attrs": {"tenant": "kestrel"}},
+    "list_invoices": {"action": "read", "resource": "billing.invoice", "attrs": {"tenant": "kestrel"}},
+    "get_employee": {"action": "read", "resource": "hr.employee", "id": "args.employee_id", "attrs": {"tenant": "kestrel"}},
+    "export_customers_csv": {"action": "read", "resource": "crm.customer", "attrs": {"tenant": "kestrel"}, "attrs_from_request": {"region": "args.region"}},
+    "customer_card_image": {"action": "read", "resource": "crm.customer", "id": "args.customer_id", "attrs": {"tenant": "kestrel"}, "lookup": {"tool": "get_customer", "arguments": {"customer_id": "args.customer_id"}}, "attrs_from_record": {"region": "region"}}
+  }
+}

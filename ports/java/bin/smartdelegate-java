@@ -1,0 +1,70 @@
+#!/bin/sh
+# The command line of the SmartDelegate Java port:
+#
+#   smartdelegate-java <command> [options]        (smartdelegate-java --help)
+#
+# Runs dev.smartdelegate.Cli from ../build/smartdelegate.jar; build it first
+# with ../build.sh. Exit code 0 allow/ok, 2 deny, 1 error (and 1 with a message
+# when the jar or a Java runtime is missing).
+#
+# Environment:
+#   JAVA_HOME                 its bin/java is used when set; otherwise java from PATH
+#   SMARTDELEGATE_JAVA_OPTS   extra JVM options, split on whitespace (e.g. "-Xmx256m")
+#   JAVA_TOOL_OPTIONS         honoured, see below
+set -eu
+
+# where this script really is, also when it was started through a symlink
+self="$0"
+while [ -L "$self" ]; do
+  link="$(readlink "$self")"
+  case "$link" in
+    /*) self="$link" ;;
+    *) self="$(dirname "$self")/$link" ;;
+  esac
+done
+here="$(cd "$(dirname "$self")" && pwd -P)"
+jar="$here/../build/smartdelegate.jar"
+if [ ! -f "$jar" ]; then
+  echo "smartdelegate: $jar does not exist: run ports/java/build.sh first" >&2
+  exit 1
+fi
+if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+  java="$JAVA_HOME/bin/java"
+elif command -v java >/dev/null 2>&1; then
+  java=java
+else
+  echo "smartdelegate: no Java runtime found (install a JRE 17+ or set JAVA_HOME)" >&2
+  exit 1
+fi
+
+# The first line `serve` writes to stderr is its URL; tests and the harness
+# read it from there. With JAVA_TOOL_OPTIONS set, the JVM prints a "Picked up
+# ..." banner on stderr before anything else. So the options are passed on the
+# command line instead (same effect, no banner). They are split on whitespace;
+# quoting inside JAVA_TOOL_OPTIONS is not interpreted.
+set -f
+tool_opts="${JAVA_TOOL_OPTIONS:-}"
+unset JAVA_TOOL_OPTIONS
+
+# Start-up: map the class-data archive build.sh made, when it is there (the
+# JVM ignores one that does not match this jar or this JVM), and say nothing
+# about it on stdout. Commands that answer and exit stop at the first JIT
+# tier; `serve` is long-running and keeps the full JIT.
+fast="-XX:TieredStopAtLevel=1"
+for a in "$@"; do
+  if [ "$a" = "serve" ]; then fast=""; fi
+done
+
+# The JVM's arguments are put in front of the command's, one group at a time,
+# so that a path with spaces stays one argument.
+# shellcheck disable=SC2086  # the option strings from the environment are split on purpose
+set -- -Dfile.encoding=UTF-8 ${SMARTDELEGATE_JAVA_OPTS:-} -jar "$jar" "$@"
+if [ -n "$fast" ]; then
+  set -- "$fast" "$@"
+fi
+if [ -f "$here/../build/smartdelegate.jsa" ]; then
+  set -- "-XX:SharedArchiveFile=$here/../build/smartdelegate.jsa" -Xshare:auto -Xlog:disable -Xlog:all=off "$@"
+fi
+# shellcheck disable=SC2086
+set -- $tool_opts "$@"
+exec "$java" "$@"

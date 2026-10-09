@@ -1,0 +1,448 @@
+{
+ "suite": "10_offboarding",
+ "about": "`revoke {\"user\": U}` ends every token whose subject is that user and whose `iat` is at or before the cut-off (the time of the call). The cut-off is kept in state.json under `revoked_users`.",
+ "cases": [
+  {
+   "name": "revoking a user ends every token already issued for them, sub-agents included",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "role": "support-agent",
+      "task": "ticket-1",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "task": "ticket-1"
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "task": "ticket-1"
+     },
+     "save": {
+      "c": "token"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "bob",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "task": null
+     },
+     "save": {
+      "b": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000004
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "by": "offboarding",
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true,
+      "revoked_user": "alice",
+      "issued_up_to": 1700000005
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked",
+      "rule": "DELEGATE-TOKEN-REVOKED",
+      "principal": {
+       "user": "alice"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$c",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true,
+      "valid": false,
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "exchange_token",
+     "input": {
+      "subject_token": "$t",
+      "actor": "refund-helper",
+      "ttl": 300,
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "token_revoked"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$b",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a token issued after the cut-off works; one issued in the same second does not",
+   "steps": [
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "same": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$same",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "later": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$later",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000007
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "now": 1700000008
+     },
+     "expect": {
+      "ok": true,
+      "issued_up_to": 1700000008
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$later",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000009
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    }
+   ]
+  },
+  {
+   "name": "revoke needs a well-formed target",
+   "steps": [
+    {
+     "op": "revoke",
+     "input": {
+      "user": "",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": 7,
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": [
+       "alice"
+      ],
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "invalid_input"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "revoking a user is recorded in the audit log",
+   "steps": [
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "by": "sync",
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "audit_verify",
+     "input": {
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "records": 1
+     }
+    }
+   ]
+  },
+  {
+   "name": "the cut-off never moves back",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "user": "alice",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000006
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "now": 1700000008
+     },
+     "expect": {
+      "ok": true,
+      "issued_up_to": 1700000008
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true,
+      "revoked_user": "alice",
+      "issued_up_to": 1700000008
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000009
+     },
+     "expect": {
+      "ok": true,
+      "effect": "deny",
+      "reason": "token_revoked"
+     }
+    }
+   ]
+  }
+ ]
+}

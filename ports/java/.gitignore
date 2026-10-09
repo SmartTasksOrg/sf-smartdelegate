@@ -1,0 +1,13 @@
+# build output (build.sh, run_conformance.sh, Maven)
+build/
+target/
+*.class
+*.jar
+*.jsa
+# keys and engine state never belong in the repository
+state/
+*.key
+*.pub
+*.pem
+signing_key.*
+audit.jsonl

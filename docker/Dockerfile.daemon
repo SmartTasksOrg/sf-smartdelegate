@@ -1,0 +1,70 @@
+# syntax=docker/dockerfile:1
+#
+# UNTESTED: this file was written on a machine without a Docker daemon. It has
+# never been built. The base image tag was checked against the official image
+# manifest (github.com/docker-library/official-images, 2026-10). See
+# docs/BUILD.md, "Docker".
+#
+# A small runtime image for the reference daemon (`sf-smartdelegate serve`); the
+# same image runs `sf-smartdelegate http-proxy` and any other command.
+#
+#   docker build -f docker/Dockerfile.daemon -t smartdelegate:0.3.0 .         (context: the repository root)
+#
+#   docker run --rm --read-only --tmpfs /tmp \
+#     -v "$PWD/my-bundle:/bundle:ro" -v smartdelegate-state:/state \
+#     -e SMARTDELEGATE_ADMIN_KEY -e SMARTDELEGATE_PEP_KEY \
+#     -p 127.0.0.1:8181:8181 smartdelegate:0.3.0
+#
+# Configuration (src/sf_smartdelegate/cli.py, load_config):
+#   SMARTDELEGATE_CONFIG       the config file; the image's default is
+#                              /etc/smartdelegate/smartdelegate.json (docker/daemon.json):
+#                              bundle_dir /bundle, state_dir /state, listen 0.0.0.0:8181.
+#                              Mount your own file over it for issuer, mode, idp,
+#                              bundle_public_key, trusted_keys, require_role ...
+#   SMARTDELEGATE_ADMIN_KEY    the two API keys of the daemon, 16+ characters each.
+#   SMARTDELEGATE_PEP_KEY      `serve` refuses to start without them.
+#   SMARTDELEGATE_ADMIN_KEY_FILE, SMARTDELEGATE_PEP_KEY_FILE
+#                              read by the entrypoint (docker/daemon-entrypoint.sh)
+#                              into the two variables above: for Docker and
+#                              Kubernetes secrets mounted as files.
+#   /bundle                    the policy bundle, mounted read-only.
+#   /state                     a volume: the signing key (created on first start),
+#                              state.json, the audit log, the lock file. Keep it;
+#                              losing it loses the key and the audit chain.
+# The root file system can be read-only: the engine writes only below /state.
+# The process runs as uid 10001, not root.
+
+FROM python:3.12-slim-bookworm AS build
+WORKDIR /src
+COPY pyproject.toml README.md LICENSE MANIFEST.in ./
+COPY src ./src
+COPY demo ./demo
+# the package and its one dependency (cryptography has manylinux wheels: no compiler needed)
+RUN pip wheel --no-cache-dir --wheel-dir /wheels .
+
+FROM python:3.12-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    SMARTDELEGATE_CONFIG=/etc/smartdelegate/smartdelegate.json
+COPY --from=build /wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links /wheels sf-smartdelegate \
+ && rm -rf /wheels \
+ && groupadd --gid 10001 smartdelegate \
+ && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /state --shell /usr/sbin/nologin smartdelegate \
+ && mkdir -p /state /bundle /etc/smartdelegate \
+ && chown 10001:10001 /state
+COPY docker/daemon.json /etc/smartdelegate/smartdelegate.json
+COPY --chmod=0755 docker/daemon-entrypoint.sh /usr/local/bin/smartdelegate-entrypoint
+
+USER 10001:10001
+WORKDIR /state
+VOLUME ["/state"]
+EXPOSE 8181 8182
+
+# /healthz answers without a key (src/sf_smartdelegate/daemon.py). For a container
+# that runs `http-proxy` instead of `serve`, override the health check.
+HEALTHCHECK --interval=10s --timeout=4s --start-period=10s --retries=6 \
+  CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8181/healthz', timeout=3).status == 200 else 1)"]
+
+ENTRYPOINT ["/usr/local/bin/smartdelegate-entrypoint"]
+CMD ["serve"]

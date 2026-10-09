@@ -1,0 +1,588 @@
+{
+ "about": "HR and IT operations: who sees which employee fields, access requests, break-glass.",
+ "cases": [
+  {
+   "name": "HR sees the national id and the emergency contact, never the bank account",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "maya",
+       "agents": [
+        "hr-orchestrator"
+       ],
+       "role": "hr-partner",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.employee",
+       "id": "emp-1"
+      },
+      "data": {
+       "id": "emp-1",
+       "name": "New Hire",
+       "email": "new.hire@kestrel.example",
+       "unit": "sales",
+       "region": "EU",
+       "manager": "sofia",
+       "job_title": "Account executive",
+       "start_date": "2026-11-01",
+       "status": "pending",
+       "national_id": "AB123456",
+       "home_address": "1 Main St",
+       "bank_account": "DE02120300000000202051",
+       "emergency_contact": "partner, +49 30 000"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "bank_account"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "an HR partner has no access to salaries; an HR manager has",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "maya",
+       "agents": [
+        "hr-orchestrator"
+       ],
+       "role": "hr-partner",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "emp-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "oskar",
+       "agents": [
+        "hr-orchestrator"
+       ],
+       "role": "hr-manager",
+       "task": "salary-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "emp-1"
+      },
+      "data": {
+       "employee_id": "emp-1",
+       "base": 520000,
+       "notes": "x"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": []
+     }
+    }
+   ]
+  },
+  {
+   "name": "IT sees the basic employee fields only",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.employee",
+       "id": "emp-1"
+      },
+      "data": {
+       "id": "emp-1",
+       "name": "New Hire",
+       "email": "new.hire@kestrel.example",
+       "unit": "sales",
+       "region": "EU",
+       "manager": "sofia",
+       "job_title": "Account executive",
+       "start_date": "2026-11-01",
+       "status": "pending",
+       "national_id": "AB123456",
+       "home_address": "1 Main St",
+       "bank_account": "DE02120300000000202051",
+       "emergency_contact": "partner, +49 30 000"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "bank_account",
+       "emergency_contact",
+       "home_address",
+       "national_id"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IT has no access to salaries or reviews",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.salary",
+       "id": "emp-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "hr.review",
+       "id": "emp-1"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "IT never receives the MFA seed of an account",
+   "steps": [
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "it.account",
+       "id": "acc-1"
+      },
+      "data": {
+       "id": "acc-1",
+       "username": "new.hire",
+       "status": "active",
+       "mfa_secret": "JBSWY3DP",
+       "last_login": "never"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "masked": [
+       "mfa_secret"
+      ],
+      "data": {
+       "id": "acc-1",
+       "username": "new.hire",
+       "status": "active",
+       "mfa_secret": "[REDACTED]",
+       "last_login": "never"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "standard access is granted once a manager approved; administrator access waits for an IT manager",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "grant",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "emp-1",
+        "approved_by": "sofia",
+        "level": "standard"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "it-grant-standard-access"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "grant",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "emp-1",
+        "approved_by": "sofia",
+        "level": "admin"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "approval_required",
+      "approval": {
+       "label": "privileged-access"
+      }
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "grant",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "emp-1",
+        "level": "standard"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  },
+  {
+   "name": "nobody grants their own access",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "yara",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "it-operator",
+       "task": "onboard-1"
+      },
+      "action": "grant",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-2",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "yara",
+        "approved_by": "sofia",
+        "level": "standard"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-nobody-grants-their-own-access"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a manager approves an access request unless they raised it or it is for themselves",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "access-approver",
+       "task": "access-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "emp-1"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "access-approver",
+       "task": "access-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "sofia",
+        "employee_id": "emp-1"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-access-approver-is-not-requester"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "sofia",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "access-approver",
+       "task": "access-1"
+      },
+      "action": "approve",
+      "resource": {
+       "path": "it.access_request",
+       "id": "ar-1",
+       "attrs": {
+        "requested_by": "maya",
+        "employee_id": "sofia"
+       }
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "policy_forbid",
+      "policies": [
+       "sod-access-approver-is-not-requester"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "break-glass works for an incident task only, and sees customer contact data only",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "bruno",
+       "agents": [
+        "incident-responder"
+       ],
+       "role": "break-glass",
+       "task": "incident-1"
+      },
+      "action": "disable",
+      "resource": {
+       "path": "it.account",
+       "id": "acc-9"
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "policies": [
+       "break-glass-accounts"
+      ]
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "bruno",
+       "agents": [
+        "incident-responder"
+       ],
+       "role": "break-glass",
+       "task": "cleanup-1"
+      },
+      "action": "disable",
+      "resource": {
+       "path": "it.account",
+       "id": "acc-9"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    },
+    {
+     "op": "filter",
+     "input": {
+      "chain": {
+       "user": "bruno",
+       "agents": [
+        "incident-responder"
+       ],
+       "role": "break-glass",
+       "task": "incident-1"
+      },
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1",
+       "attrs": {
+        "region": "US"
+       }
+      },
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold",
+       "notes": "prefers email",
+       "addresses": [
+        {
+         "city": "London",
+         "geo": "51.5,-0.1"
+        }
+       ],
+       "card": {
+        "last4": "4242",
+        "number": "4000000000004242"
+       }
+      }
+     },
+     "expect": {
+      "effect": "allow",
+      "data": {
+       "id": "c-1",
+       "name": "Ada Lovelace",
+       "email": "ada@example.com",
+       "phone": "+44 20 7946 0000",
+       "region": "EU",
+       "tier": "gold"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "break-glass through another agent is refused",
+   "steps": [
+    {
+     "op": "authorize",
+     "input": {
+      "chain": {
+       "user": "bruno",
+       "agents": [
+        "it-orchestrator"
+       ],
+       "role": "break-glass",
+       "task": "incident-1"
+      },
+      "action": "disable",
+      "resource": {
+       "path": "it.account",
+       "id": "acc-9"
+      }
+     },
+     "expect": {
+      "effect": "deny",
+      "reason": "no_matching_permit"
+     }
+    }
+   ]
+  }
+ ]
+}

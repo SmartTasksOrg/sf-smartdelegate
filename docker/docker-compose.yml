@@ -1,0 +1,330 @@
+# UNTESTED: written on a machine without a Docker daemon. `docker compose
+# config` accepts this file (Compose v5.1.3); no image was built and no
+# container was started. The image tags of postgres and python were checked
+# against the official image manifests; quay.io could not be reached, so the
+# Keycloak tag is the version live/idp/keycloak.sh downloads and the live
+# identity-provider suite was verified with (26.0.7; also 26.8.0), not
+# checked at the registry. Expect to fix details on the first `up`.
+# See docs/BUILD.md, "Docker".
+#
+# The live test topology:
+#
+#   backend network (a normal bridge; ports published on 127.0.0.1):
+#     keycloak        the identity provider, dev mode
+#     idp-init        creates the test realm, writes the daemon's idp config and JWKS file, exits
+#     postgres        the database of the upstream
+#     db-seed         loads the schema and the test data, then exits
+#     company-api     the real upstream; has its own API key
+#     smartdelegate   the decision daemon        \ these two share
+#     http-proxy      holds the upstream key     /  the state volume
+#     tests           the live suites, attached to all of the above
+#
+#   agentnet (internal: true; no way out):
+#     http-proxy      the only thing on it besides ...
+#     agent           ... the agent, which therefore reaches ONLY the proxy
+#
+#   make docker-test                          (or .\make.ps1 docker-test)
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up --build \
+#       --abort-on-container-exit --exit-code-from tests
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env config      # validate only
+#
+# Keys and passwords come from the environment (docker/.env, from the template
+# docker/.env.example). Nothing secret is in this file or in an image.
+#
+# What the `tests` service gets is the SD_* contract of the live suites
+# (live/README.md, live/idp/README.md):
+#   SD_KEYCLOAK_URL, SD_KEYCLOAK_ADMIN, SD_KEYCLOAK_ADMIN_PASSWORD   live/idp/run.sh attaches to `keycloak`
+#   SD_PG_DSN                                                        live/run.sh attaches to `postgres`
+#   SD_UPSTREAM_URL, SD_UPSTREAM_KEY                                 ... and to `company-api`
+#   SD_DAEMON_URL, SD_ADMIN_KEY, SD_PEP_KEY, SD_PROXY_URL            ... and to `smartdelegate` and `http-proxy`
+# The network-namespace boundary test (live/run.sh boundary) is not run in
+# Compose: the `agent` service on the internal network is its counterpart
+# here (docker/agent_check.py).
+#
+# The identity provider, as live/idp/README.md ("What an operator should take
+# from it") says to set it up: the daemon reads its JWKS from a FILE
+# (`idp.jwks_file`), the audience is the engine's own client (`sd-engine`;
+# the engine checks `azp`), users are sent to it with their ID token, and
+# groups arrive through a Group Membership mapper and `idp.group_map`.
+# Rotating Keycloak's signing key needs a reload, not a restart:
+#   1. add the new key in Keycloak as passive
+#   2. docker compose -f docker/docker-compose.yml --env-file docker/.env run --rm idp-jwks
+#   3. curl -X POST -H "Authorization: Bearer $SD_ADMIN_KEY" http://127.0.0.1:8181/v1/admin/reload
+#   4. make the new key active in Keycloak
+# The http-proxy shares the daemon's state but is another process: restart it
+# after a rotation only if it is given ID tokens itself (it is not, here).
+
+name: smartdelegate-live
+
+x-daemon-image: &daemon-image
+  image: smartdelegate:0.3.0
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.daemon
+
+x-fixtures-image: &fixtures-image
+  image: smartdelegate-upstream:0.3.0
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.upstream
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-keycloak-admin: &keycloak-admin
+  SD_KEYCLOAK_URL: http://keycloak:8080
+  SD_KEYCLOAK_ADMIN: ${SD_KEYCLOAK_ADMIN:-admin}
+  SD_KEYCLOAK_ADMIN_PASSWORD: ${SD_KEYCLOAK_ADMIN_PASSWORD:?set SD_KEYCLOAK_ADMIN_PASSWORD (copy docker/.env.example to docker/.env)}
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:${SD_KEYCLOAK_VERSION:-26.0.7}
+    command: ["start-dev"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${SD_KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${SD_KEYCLOAK_ADMIN_PASSWORD:?set SD_KEYCLOAK_ADMIN_PASSWORD (copy docker/.env.example to docker/.env)}
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      # tokens must carry the name the other containers use, whoever asks: the engine compares `iss` exactly
+      KC_HOSTNAME_STRICT: "false"
+    networks:
+      - backend
+    ports:
+      - "${SD_PUBLISH_HOST:-127.0.0.1}:8080:8080"
+    healthcheck:
+      # the image has no curl: bash opens the management port (9000) itself and reads the status line
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          read -r status <&3 &&
+          case "$$status" in *" 200 "*) exit 0 ;; *) exit 1 ;; esac
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+  # Once: the test realm (live/idp/provision.py), then the daemon's config
+  # with its `idp` section and the JWKS file it points at (docker/idp_init.py).
+  # The provisioning record (test passwords, client secrets) stays in idp-work,
+  # which no other service mounts; idp-config holds public material only.
+  idp-init:
+    <<: [*fixtures-image, *hardening]
+    command: ["python", "docker/idp_init.py", "--base", "docker/compose-daemon.json", "--out", "/idp-config"]
+    environment:
+      <<: *keycloak-admin
+      SD_KEYCLOAK_CACHE: /idp-work
+    volumes:
+      - idp-config:/idp-config
+      - idp-work:/idp-work
+    networks:
+      - backend
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: "no"
+
+  # Key rotation, step 2 (see the top of this file). Not started by `up`:
+  #   docker compose ... run --rm idp-jwks
+  idp-jwks:
+    <<: [*fixtures-image, *hardening]
+    profiles: ["tools"]
+    command: ["python", "docker/idp_init.py", "--jwks-only", "--out", "/idp-config"]
+    environment:
+      SD_KEYCLOAK_URL: http://keycloak:8080
+    volumes:
+      - idp-config:/idp-config
+    networks:
+      - backend
+    restart: "no"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (copy docker/.env.example to docker/.env)}
+      POSTGRES_DB: kestrel_live
+    networks:
+      backend:
+        ipv4_address: 172.28.10.11
+    ports:
+      - "${SD_PUBLISH_HOST:-127.0.0.1}:5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kestrel_live"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Loads schema.sql and the deterministic test data, once: `python3 -m
+  # live.upstream.seed`, with the DSN from SD_PG_DSN (live/upstream/seed.py).
+  db-seed:
+    <<: [*fixtures-image, *hardening]
+    command: ["python", "-m", "live.upstream.seed"]
+    environment:
+      SD_PG_DSN: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/kestrel_live
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # The real upstream: `python3 -m live.upstream.company_api`, listening on
+  # COMPANY_API_HOST:COMPANY_API_PORT (0.0.0.0:9100 in the image) with its own
+  # key. The health check is in docker/Dockerfile.upstream (GET /healthz).
+  company-api:
+    <<: [*fixtures-image, *hardening]
+    environment:
+      COMPANY_API_KEY: ${SD_UPSTREAM_KEY:?set SD_UPSTREAM_KEY (copy docker/.env.example to docker/.env)}
+      COMPANY_API_DSN: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/kestrel_live
+    networks:
+      backend:
+        ipv4_address: 172.28.10.12
+    ports:
+      - "${SD_PUBLISH_HOST:-127.0.0.1}:9100:9100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-seed:
+        condition: service_completed_successfully
+
+  # The decision daemon: the reference, `sf-smartdelegate serve`. The bundle is
+  # the company of the live suites (examples/company), mounted read-only; the
+  # config and the JWKS file come from idp-init, read-only; the state volume
+  # holds the signing key and the audit log. Health check: docker/Dockerfile.daemon.
+  smartdelegate:
+    <<: [*daemon-image, *hardening]
+    command: ["serve"]
+    environment:
+      SMARTDELEGATE_CONFIG: /idp-config/smartdelegate.json
+      SMARTDELEGATE_ADMIN_KEY: ${SD_ADMIN_KEY:?set SD_ADMIN_KEY (copy docker/.env.example to docker/.env)}
+      SMARTDELEGATE_PEP_KEY: ${SD_PEP_KEY:?set SD_PEP_KEY (copy docker/.env.example to docker/.env)}
+    volumes:
+      - ../examples/company:/bundle:ro
+      - idp-config:/idp-config:ro
+      - sd-state:/state
+    networks:
+      backend:
+        ipv4_address: 172.28.10.13
+    ports:
+      - "${SD_PUBLISH_HOST:-127.0.0.1}:8181:8181"
+    depends_on:
+      idp-init:
+        condition: service_completed_successfully
+
+  # The boundary: the only thing the agent can reach. It holds the upstream
+  # key and address (live/upstream/routes.json names them as env:COMPANY_API_KEY
+  # and env:COMPANY_API_URL; the proxy refuses to start when one is unset) and
+  # shares the daemon's state volume, so a token the daemon issues is the
+  # proxy's own and a revocation is seen on the next request.
+  http-proxy:
+    <<: [*daemon-image, *hardening]
+    command: ["http-proxy", "--routes", "/etc/smartdelegate/routes.json", "--listen", "0.0.0.0:8182"]
+    environment:
+      SMARTDELEGATE_CONFIG: /idp-config/smartdelegate.json
+      COMPANY_API_URL: http://company-api:9100
+      COMPANY_API_KEY: ${SD_UPSTREAM_KEY}
+    volumes:
+      - ../examples/company:/bundle:ro
+      - idp-config:/idp-config:ro
+      - ../live/upstream/routes.json:/etc/smartdelegate/routes.json:ro
+      - sd-state:/state
+    networks:
+      - agentnet
+      - backend
+    ports:
+      - "${SD_PUBLISH_HOST:-127.0.0.1}:8182:8182"
+    depends_on:
+      smartdelegate:
+        condition: service_healthy
+      company-api:
+        condition: service_healthy
+    healthcheck:
+      # the proxy has no /healthz: any HTTP answer on its port means it is serving
+      test: ["CMD", "python", "-c", "import http.client, sys; c = http.client.HTTPConnection('127.0.0.1', 8182, timeout=3); c.request('GET', '/'); sys.exit(0 if c.getresponse().status else 1)"]
+      interval: 10s
+      timeout: 4s
+      start_period: 10s
+      retries: 6
+
+  # A stand-in agent. Its only network is internal, with the proxy on it and
+  # nothing else: no route to the backend, no route to the internet. It gets
+  # no key at all. docker/agent_check.py verifies exactly that and exits.
+  agent:
+    image: python:3.12-slim-bookworm
+    command: ["python", "/opt/docker/agent_check.py"]
+    environment:
+      AGENT_ALLOWED: http-proxy:8182
+      AGENT_FORBIDDEN: company-api:9100,172.28.10.12:9100,postgres:5432,172.28.10.11:5432,smartdelegate:8181,172.28.10.13:8181,keycloak:8080,1.1.1.1:443
+    volumes:
+      - ./agent_check.py:/opt/docker/agent_check.py:ro
+    networks:
+      - agentnet
+    depends_on:
+      http-proxy:
+        condition: service_healthy
+    restart: "no"
+    <<: *hardening
+
+  # The live suites, attached to the services above through the SD_* contract:
+  # live/idp/run.sh, then live/run.sh upstream and load (not `all`: the boundary
+  # part needs a network namespace of its own; see `agent`). `scripts/sd.py
+  # live` reports each as PASS, SKIPPED or FAILED and exits 1 on a failure;
+  # --require makes a skipped suite a failure here, where nothing should be missing.
+  tests:
+    image: smartdelegate-dev:0.3.0
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    command: ["python3", "scripts/sd.py", "live", "idp", "upstream", "load", "--quick", "--require", "live"]
+    environment:
+      <<: *keycloak-admin
+      SD_PG_DSN: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/kestrel_live
+      SD_UPSTREAM_URL: http://company-api:9100
+      SD_UPSTREAM_KEY: ${SD_UPSTREAM_KEY}
+      SD_DAEMON_URL: http://smartdelegate:8181
+      SD_ADMIN_KEY: ${SD_ADMIN_KEY}
+      SD_PEP_KEY: ${SD_PEP_KEY}
+      SD_PROXY_URL: http://http-proxy:8182
+    networks:
+      - backend
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      company-api:
+        condition: service_healthy
+      smartdelegate:
+        condition: service_healthy
+      http-proxy:
+        condition: service_healthy
+      agent:
+        condition: service_completed_successfully
+    restart: "no"
+
+networks:
+  # everything but the agent; published ports need a network that is not internal
+  backend:
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+  # the agent's only network: Docker gives an internal network no gateway to the outside
+  agentnet:
+    internal: true
+
+volumes:
+  sd-state:
+  pg-data:
+  idp-config:
+  idp-work:

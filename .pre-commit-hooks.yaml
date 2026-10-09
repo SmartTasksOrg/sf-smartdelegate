@@ -1,0 +1,19 @@
+# Hooks for a repository that keeps a SmartDelegate policy bundle.
+# Both expect the bundle in ./bundle. For another directory override `files`
+# and `args` in .pre-commit-config.yaml (see integrations/precommit/README.md).
+- id: smartdelegate-policy-check
+  name: SmartDelegate policy check
+  description: Load the bundle; fail when policies.json is stale relative to the .cedar sources or a bundle file does not parse.
+  entry: sf-smartdelegate policy check
+  args: [--bundle, bundle]
+  language: python
+  files: ^bundle/.*\.(cedar|json)$
+  pass_filenames: false
+- id: smartdelegate-policy-test
+  name: SmartDelegate policy tests
+  description: Run the bundle's tests/*.json.
+  entry: sf-smartdelegate policy test
+  args: [--bundle, bundle]
+  language: python
+  files: ^bundle/.*\.(cedar|json)$
+  pass_filenames: false

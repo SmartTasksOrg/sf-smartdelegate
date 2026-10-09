@@ -1,0 +1,23 @@
+SmartDelegate
+Copyright 2026 SmartTasks Lab
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Names and affiliation
+---------------------
+
+SmartDelegate is published by SmartTasksOrg. The only package names it is
+published under are those marked "registered": true in names.json.
+
+Cedar is a trademark of its owner.
+LangChain is a trademark of its owner.
+LlamaIndex is a trademark of its owner.
+Okta is a trademark of its owner.
+Microsoft Entra ID is a trademark of its owner.
+Keycloak is a trademark of its owner.
+Google Cloud is a trademark of its owner.
+AWS is a trademark of its owner.
+Microsoft Azure is a trademark of its owner.
+All other names are the property of their respective owners. Their use here
+only says what the software reads, evaluates or connects to; it does not
+imply affiliation, sponsorship or endorsement.

@@ -1,0 +1,304 @@
+{
+ "id": "16_month_end_close",
+ "name": "Month-end ledger close",
+ "description": "A controller's agents post an adjusting entry; a second controller approves it; closing the period waits for a finance approver; nothing is posted to a closed period; the auditor reads the result.",
+ "units": [
+  "finance",
+  "compliance"
+ ],
+ "cast": {
+  "poster": {
+   "group": "finance-managers"
+  },
+  "second": {
+   "group": "finance-managers"
+  },
+  "auditor": {
+   "group": "compliance"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "poster",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "controller",
+   "task": "close-{n}",
+   "save": "closing",
+   "expect": "ok",
+   "why": "A finance manager lends the finance orchestrator the controller role for the month-end close."
+  },
+  {
+   "id": "s2",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "closing",
+   "to": "ledger-closer",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "finance.ledger/*"
+    ]
+   },
+   "save": "posting",
+   "expect": "ok",
+   "why": "The orchestrator hands the postings to the ledger closer: read and create, no approve, no close."
+  },
+  {
+   "id": "s3",
+   "actor": "ledger-closer",
+   "op": "call",
+   "token": "posting",
+   "action": "create",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": {
+    "period_open": true
+   },
+   "context": null,
+   "data": {
+    "id": "je-{n}",
+    "period": "2026-09",
+    "account": "6100",
+    "amount": 120000,
+    "currency": "EUR",
+    "memo": "accrual for unbilled freight",
+    "posted_by": "{poster}",
+    "status": "posted"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "The closer posts an adjusting entry to the open period. Its memo is internal: a sub-agent may not write it."
+  },
+  {
+   "id": "s4",
+   "actor": "ledger-closer",
+   "op": "call",
+   "token": "posting",
+   "action": "create",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": {
+    "period_open": true
+   },
+   "context": null,
+   "data": {
+    "id": "je-{n}",
+    "period": "2026-09",
+    "account": "6100",
+    "amount": 120000,
+    "currency": "EUR",
+    "posted_by": "{poster}",
+    "status": "posted"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "Without the internal memo the entry is posted."
+  },
+  {
+   "id": "s5",
+   "actor": "ledger-closer",
+   "op": "call",
+   "token": "posting",
+   "action": "approve",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": {
+    "posted_by": "{poster}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The closer's token carries no approve."
+  },
+  {
+   "id": "s6",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "closing",
+   "action": "approve",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": {
+    "posted_by": "{poster}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Separation of duties: the entry was posted for this controller, who cannot approve it."
+  },
+  {
+   "id": "s7",
+   "actor": "second",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "controller",
+   "task": "close-{n}",
+   "save": "second_pair_of_eyes",
+   "expect": "ok",
+   "why": "A second finance manager lends the orchestrator the controller role."
+  },
+  {
+   "id": "s8",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "second_pair_of_eyes",
+   "action": "approve",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": {
+    "posted_by": "{poster}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The second controller's agent approves the entry."
+  },
+  {
+   "id": "s9",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "closing",
+   "action": "close",
+   "resource": "finance.ledger/period-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:approval_required",
+   "why": "Closing the period waits for a finance approver."
+  },
+  {
+   "id": "s10",
+   "actor": "poster",
+   "op": "approve",
+   "request": "s9",
+   "expect": "error:self_approval",
+   "why": "The controller whose agent asks cannot release the close."
+  },
+  {
+   "id": "s11",
+   "actor": "auditor",
+   "op": "approve",
+   "request": "s9",
+   "expect": "error:approval_denied",
+   "why": "An auditor is not a finance approver."
+  },
+  {
+   "id": "s12",
+   "actor": "second",
+   "op": "approve",
+   "request": "s9",
+   "expect": "ok",
+   "why": "The second finance manager releases the close."
+  },
+  {
+   "id": "s13",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "closing",
+   "action": "close",
+   "resource": "finance.ledger/period-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The period is closed."
+  },
+  {
+   "id": "s14",
+   "actor": "ledger-closer",
+   "op": "call",
+   "token": "posting",
+   "action": "create",
+   "resource": "finance.ledger/je-{n}-late",
+   "attrs": {
+    "period_open": false
+   },
+   "context": null,
+   "data": {
+    "id": "je-{n}-late",
+    "period": "2026-09",
+    "amount": 100
+   },
+   "strict": true,
+   "expect": "deny:no_matching_permit",
+   "why": "Nothing is posted to a closed period."
+  },
+  {
+   "id": "s15",
+   "actor": "ledger-closer",
+   "op": "call",
+   "token": "posting",
+   "action": "close",
+   "resource": "finance.ledger/period-{n}-next",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The closer cannot close a period."
+  },
+  {
+   "id": "s16",
+   "actor": "auditor",
+   "op": "delegate",
+   "agent": "compliance-orchestrator",
+   "role": "auditor",
+   "task": "audit-{n}",
+   "save": "audit",
+   "expect": "ok",
+   "why": "An auditor lends the compliance orchestrator the auditor role."
+  },
+  {
+   "id": "s17",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "read",
+   "resource": "finance.ledger/je-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "je-{n}",
+    "period": "2026-09",
+    "account": "6100",
+    "amount": 120000,
+    "currency": "EUR",
+    "memo": "accrual for unbilled freight",
+    "posted_by": "{poster}",
+    "status": "posted",
+    "approved_by": "{second}"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "amount",
+     "memo",
+     "posted_by"
+    ]
+   },
+   "why": "The auditor reads the entry, memo included."
+  },
+  {
+   "id": "s18",
+   "actor": "compliance-orchestrator",
+   "op": "call",
+   "token": "audit",
+   "action": "create",
+   "resource": "finance.ledger/je-{n}-audit",
+   "attrs": {
+    "period_open": true
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "And posts nothing."
+  }
+ ]
+}

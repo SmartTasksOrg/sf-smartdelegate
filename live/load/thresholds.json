@@ -1,0 +1,7 @@
+{
+  "_comment": "Conservative CI gates for `python3 -m live.load --check`. Latency is generous because the harness runs client and server on one small shared machine; the safety gates (wrong-allow) are zero and must stay zero.",
+  "max_error_rate": 0.02,
+  "max_wrong_allow": 0,
+  "p99_op": "authorize_allow",
+  "max_p99_ms": 250
+}

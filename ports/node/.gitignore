@@ -1,0 +1,10 @@
+node_modules/
+*.tgz
+*.log
+coverage/
+.nyc_output/
+state/
+*.key
+*.pub
+bundle.sig.json
+smartdelegate.json

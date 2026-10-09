@@ -1,0 +1,8 @@
+[
+  {"uid": {"type": "Group", "id": "sd-operators"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "Group", "id": "sd-integrators"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "User", "id": "olivia"}, "attrs": {}, "parents": [{"type": "Group", "id": "sd-operators"}]},
+  {"uid": {"type": "User", "id": "ian"}, "attrs": {}, "parents": [{"type": "Group", "id": "sd-integrators"}]},
+  {"uid": {"type": "Agent", "id": "smartdelegate-operator"}, "attrs": {}, "parents": []},
+  {"uid": {"type": "Agent", "id": "smartdelegate-integrator"}, "attrs": {}, "parents": []}
+]

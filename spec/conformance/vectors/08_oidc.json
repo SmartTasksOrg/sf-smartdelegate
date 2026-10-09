@@ -1,0 +1,543 @@
+{
+ "suite": "08_oidc",
+ "about": "ID tokens from an OIDC provider name the user. `config` is merged into the conformance configuration. Regenerate with spec/tools/make_oidc_fixtures.py.",
+ "config": {
+  "idp": {
+   "issuer": "https://idp.example.test",
+   "audience": "smartdelegate-demo",
+   "jwks": {
+    "keys": [
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "test-1",
+      "n": "qzeWUVC8mcJ3fR5TQZXDc1olgxByLXfTnmHs47O_e5YROHYaj1C2wKkaBvFsWnlAHLZn5XbGQ3UwkkJHEld9gFku9yd-TyW2bZVOlY-oeDT3GHgiu7zDI2RotAt4GvzFuVnS4T1xUrN25rdZOB58JIPKVXuUUFE9ASzyS7Y-R_uF_38UfPUGK9rkdrm5pDVRJAbcg1SgZFOb6_WK8pZtS3zX077Ivrxmi-fHKhZx3K6pickNqesbn6pkPyQ_5lGy6PUgSgYXfxj3R4Sg4o0ASk7PHkDgxcOLjMQgTjAC9ZwXKgDsBBVb6z-tVUwWz4VEbPzix8r5TkZ-jszUomBZew",
+      "e": "AQAB"
+     }
+    ]
+   }
+  }
+ },
+ "cases": [
+  {
+   "name": "a verified ID token names the user",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true,
+      "user": "alice"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "user": "alice"
+     },
+     "expect": {
+      "ok": true,
+      "user": "alice"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": true,
+      "role": "support-agent"
+     }
+    }
+   ]
+  },
+  {
+   "name": "policy still applies to a verified user",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiZGF2ZSJ9.SLNBeG3MTWIiQiUD3CWEpe5LDHg-T0hpwugPqc27qoC43s-lePfLWB1XgU4bGKgHD_0r6fOsUmyz452D2Z682xpAZbIUijQatpOFxUSmq0bnwDpvFiuVnhBETG6iDKlmIgBbwOC1tUjbIBQTVACn-199p-STRxD8f3-03CG4YYkf-mKPfHDzg0c9cASKskiG1xfruePrjR3i66ttf7svhMClte15RMXTJh3-zEPiv0jitCKUi8c3Ov7Pe8JlUwACADdj9cFrwE6L3I-MaCQuZ68-G_XLtsK6CTtsTFR0ONGNeugyqxqBYbiIl8-x3SKOBPW-OyMfDJQCiTlp6zXBZw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiZGF2ZSJ9.SLNBeG3MTWIiQiUD3CWEpe5LDHg-T0hpwugPqc27qoC43s-lePfLWB1XgU4bGKgHD_0r6fOsUmyz452D2Z682xpAZbIUijQatpOFxUSmq0bnwDpvFiuVnhBETG6iDKlmIgBbwOC1tUjbIBQTVACn-199p-STRxD8f3-03CG4YYkf-mKPfHDzg0c9cASKskiG1xfruePrjR3i66ttf7svhMClte15RMXTJh3-zEPiv0jitCKUi8c3Ov7Pe8JlUwACADdj9cFrwE6L3I-MaCQuZ68-G_XLtsK6CTtsTFR0ONGNeugyqxqBYbiIl8-x3SKOBPW-OyMfDJQCiTlp6zXBZw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "bad ID tokens are refused",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDEwMDAsICJzdWIiOiAiYWxpY2UifQ.MEK2MnTI1m23Tki7H74yf3jYZ6yVTxhaYSYVGoJUmE-kibXakXH-hYIUoT7yW67vEFUp0wPNwA8qX0k-Co83RQbhrBIJX1R8KQO26hO22dPza3jGJ2xVara0Wt3zes4ndAzYKqalSA6uze_quhohSrUqAR29bGdcCFAf-Cn74uNkFiyIkBOLWGaNFX5fmlcBheUCNjkIm5Ox0to_3GVgwbJ4KMraZGL3AjxDBKW5TR-emS007QhsC5poEAi9GkTpX-j6kMe9O7N7FfFghAXWyMTCPtD5MWB4yojI9t2y6VwCr4uzWVESEwxk0oIWGgYRO0lCqgG__r3KoNBC3qUzZw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzb21lb25lLWVsc2UiLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.htx62oPynE_-GDYlLnOrUq0LVCxQwgHJ5eRikmhrjEeqf5yDz1GJbYBtGB7pWFQIgaL0ussk4YUw_pfcsIagm9BSS_wCNIx5d3toRzKrCKGmZ0Gxjl8nti5hagVUso7Uu0Nbjsuf0u2KAwPPN8isFH6_bVLCmjsI1uoC7J9U7-Z1pTSPvUpWA8uD0bbVq5_oZkzqBziktRX2kSaOPcvdjVfy0Dbx97vNNAkgO0fK0cD1inARI_tdCDXI3L4PjAR1N4JNtDOB-l4OQ06GbG4bOGVMc6UJ0HiI-mwXOATPiomnVLh2BsXc5XpZl_YC-5EK5dqapIfmu6WkodOSwIujWQ",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9ldmlsLmV4YW1wbGUudGVzdCIsICJhdWQiOiAic21hcnRkZWxlZ2F0ZS1kZW1vIiwgImlhdCI6IDE3MDAwMDAwMDAsICJleHAiOiA0MTAyNDQ0ODAwLCAic3ViIjogImFsaWNlIn0.SNPtgnbFgfb3B7Trcfq7TKX4C89khfLb_ywAECJDMvKcN2Cw0E5KEDk70DNDcrUhSpperNiMcDprj1-Atcxcd4qznuqNpKdxEbSJKRoC3clSeprqe2ITMT4gX9n9G0DqNJBNzAhAaqAEyjuoMZTxnVnfLckbDnQtWw_Tjp9D5Pa3c5r0-4nuq58VCSgXQ6ExhKQpn-tYslc7UquSG161aL3vJ9Bqzc8LR42DcbBWuC7Ti-DMMsqe10BDPDIym3NeYOj7csz0nnkZSiYjijx1lksCdXq81Gu17-gdZjk7gxA4LGAQb6oyKc9v4zVYhXycnTog6SAoTx4umpSvSFZGCw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.d5lyT0yCogV9l90dhiW4zBPr8CFAdPJD_wijNt4MudQ1bkUI1Dtd8JvXXl1SG8aOvzcSPEshJkiVxW1BeE-K4lBbK8trRv-Wan1gp_QObzwKPryyIQSQTL4uOVnEaOvfhfhVCRsHBSmTEfd_2OEkwKYMupwHfG2qs5lLe5bPVlRGxeFq-Gamnp2h0GUwG5uABX7gnjIbrx2IemiOkFfQ1QEY2KEP8TJkQK77Seze5sz6Z5mVWudCK4FjtcLOJKU1Ce5UK3KlWAlOf5Tr65LKI9vLi1LZN9B5exiZxwyUCXnik233yGVAmQT8nVtH_sdOCvOGsVajdBQQlKjHG6mVIw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "not.a.jwt",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a token issued to another client is not an ID token for this one",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiYXpwIjogInNtYXJ0ZGVsZWdhdGUtZGVtbyJ9.gheE2r0QGoqZBU-qgBiINg1JaiSZ64_H0Vdr-4H86lWHkzwmCAbhatXZ4Yg50vk4P6cV_R4OpuJufDvy-DT0BsL2PJHjTNYj3bKMS4C-kOEFtchrf-TqJmkVSPmLxbmF7ku-CHJ2znMpKIiR4Lh3XmsF9YlY8j1g0bmjKnZ-6E4AdjMUTCt5XoVUCX3kZXuzaZsPOV0s5A-LJyoxXTbnFSucZ8uR2JzyBISFPl1O_hixUeP0Gzbgy-mUMpyjztu-upwcrbb8V-Pw9UtLEFANYG_jpX4hg07m-ggWw05dAeZ_aW82x0q9ysOWesYwADsTyTpazX7piSpnPip7WVvO1w",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6IFsic21hcnRkZWxlZ2F0ZS1kZW1vIiwgImFjY291bnQiXSwgImlhdCI6IDE3MDAwMDAwMDAsICJleHAiOiA0MTAyNDQ0ODAwLCAic3ViIjogImFsaWNlIiwgImF6cCI6ICJzbWFydGRlbGVnYXRlLWRlbW8ifQ.QiSx2indUySWCZihywNbqEhbvNC7bBiIia8NyjLHc05HTpiHpbeRayJeIPjNEb7Rahfdvxceri8gORGu8tviDzOdvkbQLr16q9tjwgiBhq0WAGUbA2fHh5A1sBsUssTVy8-niy-S2pKzitiDUPZcCtGDGKL-WFnwO22wjPQOEkd4aK0oCtBiIyl2ApmO3mbMVJ4T5sGXBDWQ9ZrB7ySZKx_dZEqxlEv6OoY_8Kib2EB87YwK2TOxlrrbHvsIDYfPLOakgRN0QILzP7cvNssMcYxZSZmf6Imr8DAmgkAC2Q0U28uNlgvRZkRS_peXvyBhEv-l8WjsEYS02x_kuAEz4g",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6IFsib3RoZXItY2xpZW50IiwgInNtYXJ0ZGVsZWdhdGUtZGVtbyJdLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiYXpwIjogIm90aGVyLWNsaWVudCJ9.heW50FZGVkwXHTmH77dUXFf6gx1uRdqTgIbbY-aMxcmtuSvNn3u6g77theGfIhICeWNIc8AdCofv2Vh_GmdfPHfFA_8V6x5uDzRgl-J6MUFM_dSDlkv5zDHpHxa9nPrv9sqN5ten2dST3piobwiFqWRrLDjrYfmSIobHCcKB--GlXeGWlZJc0ltFRHPly85RD3wem24O5s8FlCZg6gQDk7Aw0GS2svkNtJr5lHxE5GoRYQn5sk1wlss4gVCvRLowmOBUEMmFSahbL3l1JxCHhctfKn3TG0jOKGb1JNJ3i88SdSWGYofn32bOqf8VXNHuKFOFlncj9YgWKN4ssP2zHg",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiYXpwIjogIm90aGVyLWNsaWVudCJ9.iVA5S3PxpBwApo0w2rGxIXpXZh0vD9Gw_H_J1Cz69C8ctWJnasy3VG2HQnkRkAVeIwgmStLgQ4QbaR23m7__6JuyscTSlBxgm_AMNvJZCpUfP2ZKEIdSFHfU6LHHbY_npwqffYlj17C2FHtuHrTFoWxYS7N_rr1dVeOTdzKCJnlcp7o8Qx9x-8Byilo4yU0NkNmQ6JfHXAe8ObxGWL0GVQwpSdxONHkAMDNXofRMJ2eQaz_sAecL3nNR2Pcyoz0uUTFhunU87dLV6GUd4yPlLDuOR6_OgOUr6J8Oe8jG8yhqtpkmCORjLalObBKu-s77LYZtBWOf2-kWECcbT6Dp-Q",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6IFsib3RoZXItY2xpZW50IiwgInNtYXJ0ZGVsZWdhdGUtZGVtbyJdLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.V5OBfEZG0w4RDD9_VEs8AHooW7VuMgXmmZaB7hN6TbSuJaGRYnaSWHSHni8dujgUbIHxy9m8lQdvsluJtFLoOBQk6hi6x7sfrLMrgQZuTMge0oKqkG2WRMSYdj8S2AuZkrF7Y2PuFeKW47dF2LOz2PMHyTcNPTKp94YrkIYj7Y3dUYiFwBH0Tm6WZgUn_xxzucRFfPyqIq5eT84k2jPkMLNPWeYVJgaPrp34cs2JLE4QybLMZYQjBb7hgPZ7Dz9ULM_zqViU6F8T8HAlmvRcutNfvu5Cnt5qPB8xs1fDvd3n_gS_L2M0x3dbGgX0Ui9Tz4yfXhbhXo3Cm81LyzJ_DQ",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a sign-in from before the user was revoked cannot start a new agent",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMywgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.Ocglsl9ouCDKhVfxkPrcHj011RcNIncDqk1Ei21vOvG4tEW05E1JEtkV8XdFhBNb2WGFjktKdVgM2zGJt2_KgEgJ84DG61gBPlU3QfPiwCcxJRcOpdCz6fk7gHg9tgieIEZZur7lSVHsCUW3K5zMcU_0QZ9MDV33YIZyDSQI4cEfLvuS7h3t674IJ3l37MfVGMcfci-MHinbgufnAxkYjxScGaC-ZwWi1Nnvi-ibwfNBPuD1TGu6YiQ8dsrqwq3VWqmPi-2hfrAwS9B6NaQkn4cs27pYyZlfChsp8nGL90yoUNTdZi6IAI0jm3-ARxDDyQtPRUqaBrneXVw3PdFg0A",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      }
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "revoke",
+     "input": {
+      "user": "alice",
+      "now": 1700000005
+     },
+     "expect": {
+      "ok": true
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMywgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.Ocglsl9ouCDKhVfxkPrcHj011RcNIncDqk1Ei21vOvG4tEW05E1JEtkV8XdFhBNb2WGFjktKdVgM2zGJt2_KgEgJ84DG61gBPlU3QfPiwCcxJRcOpdCz6fk7gHg9tgieIEZZur7lSVHsCUW3K5zMcU_0QZ9MDV33YIZyDSQI4cEfLvuS7h3t674IJ3l37MfVGMcfci-MHinbgufnAxkYjxScGaC-ZwWi1Nnvi-ibwfNBPuD1TGu6YiQ8dsrqwq3VWqmPi-2hfrAwS9B6NaQkn4cs27pYyZlfChsp8nGL90yoUNTdZi6IAI0jm3-ARxDDyQtPRUqaBrneXVw3PdFg0A",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000010
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000010
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiZXhwIjogNDEwMjQ0NDgwMCwgInN1YiI6ICJhbGljZSJ9.V0mkdzpe-vfaSerroGapmI_8yO_uL9qVJV0-TG-GCFUorfI4cW1JytziFPk5j_OfcwWxh9Revmvt3J33LQUEF3mHcq9NHw70CDZL5x05m-DjL0IXA-uIfPNe_M_Y99qznD4yJ_tGclizEjnHynhj47qISfE3Q8-rE3Y-Ih6m_Yvk2liJ-A5LU9C9f-wEwikDUL4rC3YV1kgBM5stD3Hfk-TDFLMLOvS6bZ1KR1Ha1AKgz_BZUa5bVzkzI8OQEkI3legDeB6H1WnAXrYwalux3VkWdSm2ftq1kJnx4KlWJEMHWrCusxOruF5furHBTcvaW8aIf6DYW5hkCkrMK1qnEg",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000010
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "id_token_invalid"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwOSwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.Nj5g2ilWutMW0s8oThkRfUD8Eax3xtkQ9096rmVijUjHctY2GjiED_U-J3PSodipCz9jcvNLZEa0-8jQHSMJpevgNDra_BeNoSh4orqEliwv-gOhGl3k8CqoC4vb43FIUSK7BhJQK46_wWK7-ezXUGryRtfUhhI048aBZyN-LgE49scD2R6y97b4lTbiZUCRek6qwdCJb_U-ta8_G7Yl752waggY_FlymUnfTsPEMikqLH02AXSb30n1o4BI_g41jKDAIBcBGaXHRqHgPv77RqZtBLKAyI2cSKzUR0EoH3fXCjuKeEjvLcHvcpcI65abCWlbq2vFl_Z-Y6_IU48LTA",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000010
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "authorize",
+     "input": {
+      "token": "$t",
+      "action": "read",
+      "resource": {
+       "path": "crm.customer",
+       "id": "c-1"
+      },
+      "now": 1700000011
+     },
+     "expect": {
+      "ok": true,
+      "effect": "allow"
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiZGF2ZSJ9.SLNBeG3MTWIiQiUD3CWEpe5LDHg-T0hpwugPqc27qoC43s-lePfLWB1XgU4bGKgHD_0r6fOsUmyz452D2Z682xpAZbIUijQatpOFxUSmq0bnwDpvFiuVnhBETG6iDKlmIgBbwOC1tUjbIBQTVACn-199p-STRxD8f3-03CG4YYkf-mKPfHDzg0c9cASKskiG1xfruePrjR3i66ttf7svhMClte15RMXTJh3-zEPiv0jitCKUi8c3Ov7Pe8JlUwACADdj9cFrwE6L3I-MaCQuZ68-G_XLtsK6CTtsTFR0ONGNeugyqxqBYbiIl8-x3SKOBPW-OyMfDJQCiTlp6zXBZw",
+      "agent": "support-bot",
+      "cap": {
+       "actions": [
+        "read"
+       ],
+       "resources": [
+        "crm.customer/*"
+       ]
+      },
+      "now": 1700000010
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "delegation_denied"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "without a groups claim configured, group claims in the ID token are ignored",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAiZ3JvdXBzIjogW119.e26GW1BvBo43l3jpN8bPphB6qW0DTZagFI0y3B_udFLqUORBv5u8BjCgSN9dcQBh9y9AtrASzjCkYgWCoZxTkzcpGtOZHm5lz7DKhaLhK844wUSiNlFg7BNG1wUSKcLE1Y0SyeWXA8D147Ws7el1IwsSmyn11tALSSfsg0iFHpbwMCZs5nVmNc6yGXo5FKdvu1HVjxy7bv7vLEDOZmaZzOsAh6wtTbe3dk-nrOF9Cahvgu429FEV346qirZ8qPRrKbFhGvsjaXm7P-sjKoqbjKkGMXmV6IwI8ZBHHz8uSJvV_9qrcEvwCuPELGJF_bZhLMKlQiarT6UnFzW6d8UHoA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": true
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": null
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

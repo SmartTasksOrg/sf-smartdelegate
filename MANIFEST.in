@@ -1,0 +1,3 @@
+include README.md LICENSE MANIFESTO.md CHANGELOG.md AUTHORS.md
+recursive-include demo *
+recursive-include src/sf_smartdelegate/example_bundle *

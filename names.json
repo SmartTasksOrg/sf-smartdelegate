@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "repo": "SmartTasksOrg/sf-smartdelegate",
+  "checked_on": "2026-10-09",
+  "names": [
+    {
+      "registry": "pypi",
+      "name": "sf-smartdelegate",
+      "registered": true,
+      "workflow": "release.yml",
+      "note": "first release (0.3.0) is published from the first commit of this repository by release.yml; README 'Install' says to use a clone until it is on PyPI"
+    },
+    {
+      "registry": "pypi",
+      "name": "smartdelegate",
+      "registered": false,
+      "note": "not used by the family: packages are published as sf-<name>; never install this name"
+    },
+    {
+      "registry": "npm",
+      "name": "sf-smartdelegate",
+      "registered": false
+    },
+    {
+      "registry": "npm",
+      "name": "sf-smartdelegate-client",
+      "registered": false
+    },
+    {
+      "registry": "packagist",
+      "name": "smarttasksorg/sf-smartdelegate",
+      "registered": false
+    },
+    {
+      "registry": "crates",
+      "name": "smartdelegate",
+      "registered": false,
+      "note": "the Rust port's crate; built from source, never published"
+    },
+    {
+      "registry": "crates",
+      "name": "smartdelegate-core",
+      "registered": false,
+      "note": "the Rust port's crate; built from source, never published"
+    },
+    {
+      "registry": "go",
+      "name": "github.com/SmartTasksOrg/sf-smartdelegate/ports/go",
+      "registered": false
+    },
+    {
+      "registry": "mcp",
+      "name": "io.github.smarttasksorg/sf-smartdelegate",
+      "registered": false
+    }
+  ],
+  "third_party": {
+    "pypi": [
+      "pip",
+      "build",
+      "pytest",
+      "cryptography",
+      "langchain-core",
+      "llama-index-core"
+    ],
+    "npm": []
+  },
+  "local_images": [],
+  "git_owners": [
+    "SmartTasksOrg"
+  ],
+  "exclude_paths": []
+}

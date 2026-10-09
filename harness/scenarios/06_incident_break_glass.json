@@ -1,0 +1,260 @@
+{
+ "id": "06_incident_break_glass",
+ "name": "Incident break-glass",
+ "description": "During an incident the on-call lead, the one person who holds the break-glass role, lends it to the incident responder for five minutes. Nobody else can, it works for incident tasks only, it is never passed to a sub-agent, and it expires mid-flow.",
+ "units": [
+  "it-ops",
+  "support"
+ ],
+ "requires": [
+  "test_clock"
+ ],
+ "cast": {
+  "lead": {
+   "user": "bruno"
+  },
+  "it_manager": {
+   "group": "it-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "it_manager",
+   "op": "delegate",
+   "agent": "incident-responder",
+   "role": "break-glass",
+   "task": "incident-{n}",
+   "save": null,
+   "expect": "error:role_not_held",
+   "why": "An IT manager outranks the on-call lead and still does not hold the break-glass role."
+  },
+  {
+   "id": "s2",
+   "actor": "lead",
+   "op": "delegate",
+   "agent": "incident-responder",
+   "role": "break-glass",
+   "task": "cleanup-{n}",
+   "save": null,
+   "expect": "error:role_exceeded",
+   "why": "The role covers incident tasks only."
+  },
+  {
+   "id": "s3",
+   "actor": "lead",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "break-glass",
+   "task": "incident-{n}",
+   "save": null,
+   "expect": "error:role_exceeded",
+   "why": "The role is for the incident responder only."
+  },
+  {
+   "id": "s4",
+   "actor": "lead",
+   "op": "delegate",
+   "agent": "incident-responder",
+   "role": "break-glass",
+   "task": "incident-{n}",
+   "save": "glass",
+   "ttl": 3600,
+   "expect": "ok",
+   "why": "The on-call lead breaks the glass for this incident."
+  },
+  {
+   "id": "s5",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "disable",
+   "resource": "it.account/acc-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The responder disables the compromised account."
+  },
+  {
+   "id": "s6",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "US"
+   },
+   "context": null,
+   "data": {
+    "id": "c-{n}",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+44 20 7946 0000",
+    "region": "US",
+    "tier": "gold",
+    "notes": "prefers email",
+    "addresses": [
+     {
+      "city": "London",
+      "geo": "51.5,-0.1"
+     }
+    ],
+    "card": {
+     "last4": "4242",
+     "number": "4000000000004242"
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "notes",
+     "card.last4",
+     "card.number",
+     "addresses"
+    ],
+    "visible": [
+     "name",
+     "email",
+     "phone"
+    ]
+   },
+   "why": "The responder reads the affected customer's contact data, whatever the region, and nothing else of the record."
+  },
+  {
+   "id": "s7",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Break-glass does not open HR records."
+  },
+  {
+   "id": "s8",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "create",
+   "resource": "it.account/acc-{n}-new",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "Break-glass does not create accounts."
+  },
+  {
+   "id": "s9",
+   "actor": "incident-responder",
+   "op": "narrow",
+   "token": "glass",
+   "to": "access-reviewer",
+   "cap": null,
+   "save": null,
+   "expect": "error:delegation_denied",
+   "why": "Break-glass authority is never passed on."
+  },
+  {
+   "id": "s10",
+   "actor": "clock",
+   "op": "advance",
+   "seconds": 240,
+   "why": "Four minutes pass."
+  },
+  {
+   "id": "s11",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "read",
+   "resource": "it.account/acc-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "acc-{n}",
+    "username": "j.doe",
+    "status": "disabled",
+    "mfa_secret": "JBSWY3DPEHPK3PXP",
+    "last_login": "2026-10-01"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "mfa_secret",
+     "last_login"
+    ],
+    "visible": [
+     "status"
+    ]
+   },
+   "why": "Still inside the five minutes."
+  },
+  {
+   "id": "s12",
+   "actor": "clock",
+   "op": "advance",
+   "seconds": 61,
+   "why": "Another minute passes: five minutes and one second since the glass was broken. The lead asked for an hour; the role gives five minutes."
+  },
+  {
+   "id": "s13",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass",
+   "action": "disable",
+   "resource": "it.account/acc-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_expired",
+   "why": "The token has expired mid-flow."
+  },
+  {
+   "id": "s14",
+   "actor": "incident-responder",
+   "op": "narrow",
+   "token": "glass",
+   "to": "access-reviewer",
+   "cap": null,
+   "save": null,
+   "expect": "error:token_expired",
+   "why": "An expired token cannot be exchanged either."
+  },
+  {
+   "id": "s15",
+   "actor": "lead",
+   "op": "delegate",
+   "agent": "incident-responder",
+   "role": "break-glass",
+   "task": "incident-{n}",
+   "save": "glass_again",
+   "expect": "ok",
+   "why": "The lead breaks the glass again; that is a new token and a new audit record."
+  },
+  {
+   "id": "s16",
+   "actor": "incident-responder",
+   "op": "call",
+   "token": "glass_again",
+   "action": "disable",
+   "resource": "it.account/acc-{n}-2",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The responder continues under the new token."
+  }
+ ]
+}

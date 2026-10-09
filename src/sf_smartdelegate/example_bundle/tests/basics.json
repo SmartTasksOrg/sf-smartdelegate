@@ -1,0 +1,158 @@
+{
+  "about": "Policy unit tests. Run with `smartdelegate policy test`. Tests run without tokens: `chain` states who is acting, so they exercise the policies and the field catalog, not the token layer.",
+  "cases": [
+    {
+      "name": "support agent reads a customer without secret or internal fields",
+      "steps": [
+        {
+          "op": "authorize",
+          "input": {
+            "chain": {
+              "user": "alice",
+              "agents": [
+                "support-bot"
+              ]
+            },
+            "action": "read",
+            "resource": {
+              "path": "crm.customer",
+              "id": "c-1"
+            }
+          },
+          "expect": {
+            "effect": "allow",
+            "policies": [
+              "support-read-customer"
+            ],
+            "obligations": {
+              "fields": {
+                "deny": [
+                  "addresses[].geo",
+                  "card.number",
+                  "notes",
+                  "ssn"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a user outside support gets nothing through the support agent",
+      "steps": [
+        {
+          "op": "authorize",
+          "input": {
+            "chain": {
+              "user": "dave",
+              "agents": [
+                "support-bot"
+              ]
+            },
+            "action": "read",
+            "resource": {
+              "path": "crm.customer",
+              "id": "c-1"
+            }
+          },
+          "expect": {
+            "effect": "deny",
+            "reason": "no_matching_permit"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a sub-agent never sees secret fields, even for compliance",
+      "steps": [
+        {
+          "op": "filter",
+          "input": {
+            "chain": {
+              "user": "carol",
+              "agents": [
+                "support-bot"
+              ]
+            },
+            "action": "read",
+            "resource": {
+              "path": "crm.customer",
+              "id": "c-1"
+            },
+            "data": {
+              "id": "c-1",
+              "ssn": "123-45-6789"
+            }
+          },
+          "expect": {
+            "effect": "allow",
+            "data": {
+              "id": "c-1",
+              "ssn": "123-45-6789"
+            }
+          }
+        },
+        {
+          "op": "filter",
+          "input": {
+            "chain": {
+              "user": "carol",
+              "agents": [
+                "support-bot",
+                "summarizer"
+              ]
+            },
+            "action": "read",
+            "resource": {
+              "path": "crm.customer",
+              "id": "c-1"
+            },
+            "data": {
+              "id": "c-1",
+              "ssn": "123-45-6789"
+            }
+          },
+          "expect": {
+            "effect": "allow",
+            "data": {
+              "id": "c-1"
+            },
+            "masked": [
+              "ssn"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "only contact fields can be updated",
+      "steps": [
+        {
+          "op": "filter",
+          "input": {
+            "chain": {
+              "user": "alice",
+              "agents": [
+                "support-bot"
+              ]
+            },
+            "action": "update",
+            "strict": true,
+            "resource": {
+              "path": "crm.customer",
+              "id": "c-1"
+            },
+            "data": {
+              "tier": "platinum"
+            }
+          },
+          "expect": {
+            "effect": "deny",
+            "reason": "field_denied"
+          }
+        }
+      ]
+    }
+  ]
+}

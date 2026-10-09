@@ -1,0 +1,16 @@
+# Composer
+/vendor/
+/composer.lock
+
+# anything a local run may leave behind: keys, state directories, signatures of test bundles
+/state/
+/tmp/
+*.key
+*.pub
+*.pk8.b64
+state.json
+state.json.tmp
+audit.jsonl
+/smartdelegate.json
+.phpunit.result.cache
+.php-cs-fixer.cache

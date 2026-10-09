@@ -1,0 +1,19 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+if (PHP_VERSION_ID < 80100) {
+    fwrite(STDERR, "smartdelegate-php needs PHP 8.1 or later\n");
+    exit(1);
+}
+foreach (['sodium', 'openssl', 'mbstring'] as $ext) {
+    if (!extension_loaded($ext)) {
+        fwrite(STDERR, "smartdelegate-php needs the PHP extension '$ext'\n");
+        exit(1);
+    }
+}
+// results go to standard output as JSON; PHP's own diagnostics must not be mixed into them
+ini_set('display_errors', 'stderr');
+require dirname(__DIR__) . '/src/autoload.php';
+
+exit(SmartDelegate\Cli::main(array_slice($argv, 1)));

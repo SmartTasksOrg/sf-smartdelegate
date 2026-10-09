@@ -1,0 +1,285 @@
+{
+ "id": "07_offboarding_mid_task",
+ "name": "Offboarding mid-task",
+ "description": "A support agent is offboarded while their orchestrator and two sub-agents are in the middle of a ticket. Every later step with those tokens fails. A colleague's agent picks the work item up under the colleague's own role. The scenario also shows what offboarding does not do: it is a cut-off in time, and the stored directory decides whether the leaver can still get a new token.",
+ "units": [
+  "support",
+  "it-ops"
+ ],
+ "cast": {
+  "leaver": {
+   "group": "support",
+   "not_group": "support-supervisors"
+  },
+  "colleague": {
+   "group": "support",
+   "not_group": "support-supervisors",
+   "region_of": "leaver"
+  },
+  "admin": {
+   "group": "it-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "leaver",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}",
+   "save": "old_task",
+   "expect": "ok",
+   "why": "A support agent starts a ticket."
+  },
+  {
+   "id": "s2",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "old_task",
+   "to": "refund-worker",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "billing.refund/*"
+    ],
+    "budget": {
+     "{leaver.currency}": 10000
+    }
+   },
+   "save": "old_refunds",
+   "expect": "ok",
+   "why": "The orchestrator hands refunds to the refund worker."
+  },
+  {
+   "id": "s3",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "old_task",
+   "to": "ticket-triager",
+   "cap": {
+    "actions": [
+     "read",
+     "create",
+     "update"
+    ],
+    "resources": [
+     "crm.ticket/*"
+    ]
+   },
+   "save": "old_triage",
+   "expect": "ok",
+   "why": "And the ticket itself to the triager."
+  },
+  {
+   "id": "s4",
+   "actor": "ticket-triager",
+   "op": "call",
+   "token": "old_triage",
+   "action": "update",
+   "resource": "crm.ticket/t-{n}",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": null,
+   "data": {
+    "status": "in_progress"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The triager sets the ticket in progress."
+  },
+  {
+   "id": "s5",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "old_refunds",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-1",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{leaver.currency}",
+     "amount": 3000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The refund worker refunds 30.00."
+  },
+  {
+   "id": "s6",
+   "actor": "admin",
+   "op": "revoke_user",
+   "user": "leaver",
+   "expect": "ok",
+   "why": "The leaver is offboarded: one call ends every token already issued for them."
+  },
+  {
+   "id": "s7",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "old_task",
+   "action": "read",
+   "resource": "crm.customer/c-{n}",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_revoked",
+   "why": "The orchestrator's token is dead."
+  },
+  {
+   "id": "s8",
+   "actor": "refund-worker",
+   "op": "call",
+   "token": "old_refunds",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{leaver.currency}",
+     "amount": 3000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_revoked",
+   "why": "So is the refund worker's, although nobody revoked it by name."
+  },
+  {
+   "id": "s9",
+   "actor": "ticket-triager",
+   "op": "call",
+   "token": "old_triage",
+   "action": "update",
+   "resource": "crm.ticket/t-{n}",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": null,
+   "data": {
+    "status": "resolved"
+   },
+   "strict": true,
+   "expect": "deny:token_revoked",
+   "why": "And the triager's."
+  },
+  {
+   "id": "s10",
+   "actor": "support-orchestrator",
+   "op": "narrow",
+   "token": "old_task",
+   "to": "refund-worker",
+   "cap": null,
+   "save": null,
+   "expect": "error:token_revoked",
+   "why": "A dead token cannot be exchanged for a new one."
+  },
+  {
+   "id": "s11",
+   "actor": "clock",
+   "op": "advance",
+   "seconds": 2,
+   "why": "Two seconds pass."
+  },
+  {
+   "id": "s12",
+   "actor": "ticket-triager",
+   "op": "handoff",
+   "to": "support-orchestrator",
+   "item": {
+    "work": "ticket reassigned",
+    "ticket": "t-{n}",
+    "from": "{leaver}",
+    "to": "{colleague}"
+   },
+   "tokens": null,
+   "why": "The open ticket goes back to the orchestrator's queue as a work item."
+  },
+  {
+   "id": "s13",
+   "actor": "colleague",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}",
+   "save": "new_task",
+   "expect": "ok",
+   "why": "A colleague picks the ticket up and lends the orchestrator their own role."
+  },
+  {
+   "id": "s14",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "new_task",
+   "action": "update",
+   "resource": "crm.ticket/t-{n}",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": null,
+   "data": {
+    "status": "resolved"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The work continues under the colleague's authority."
+  },
+  {
+   "id": "s15",
+   "actor": "support-orchestrator",
+   "op": "call",
+   "token": "new_task",
+   "action": "create",
+   "resource": "billing.refund/rf-{n}-2",
+   "attrs": {
+    "region": "{leaver.region}"
+   },
+   "context": {
+    "spend": {
+     "currency": "{leaver.currency}",
+     "amount": 3000
+    }
+   },
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Including the refund that was refused a moment ago."
+  },
+  {
+   "id": "s16",
+   "actor": "leaver",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}-again",
+   "save": null,
+   "groups": [],
+   "expect": "error:role_not_held",
+   "why": "The identity provider no longer lists the leaver in any group: with live membership, no new token."
+  },
+  {
+   "id": "s17",
+   "actor": "leaver",
+   "op": "delegate",
+   "agent": "support-orchestrator",
+   "role": "support-agent",
+   "task": "ticket-{n}-again",
+   "save": "stale_directory",
+   "expect": "ok",
+   "why": "NOT PREVENTED: revoking a user is a cut-off in time, not a ban. Until entities.json is synced, the stored directory still lists the leaver in support, and a request that sends no live membership gets a new token (docs/LIMITATIONS.md, section 5 and 7)."
+  }
+ ]
+}

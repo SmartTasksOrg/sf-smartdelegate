@@ -1,0 +1,666 @@
+{
+ "about": "The rules of examples/company/README.md that the live upstream suite checks, written from that page by hand (not generated from the policies): which roles are regional, which labels are for which roles, what each agent group reads and writes of a resource, and who may do what at all. No engine reads this file.",
+ "regional": {
+  "roles": [
+   "support-agent",
+   "support-supervisor",
+   "sales-rep",
+   "sales-manager"
+  ],
+  "resources": [
+   "crm.customer",
+   "crm.ticket",
+   "billing.refund",
+   "sales.opportunity",
+   "sales.contract"
+  ],
+  "row_filtered": [
+   "crm.customer",
+   "crm.ticket",
+   "billing.refund",
+   "sales.opportunity",
+   "sales.contract"
+  ]
+ },
+ "label_rules": [
+  {
+   "label": "bank",
+   "only_roles": [
+    "treasury"
+   ]
+  },
+  {
+   "label": "card",
+   "only_roles": []
+  },
+  {
+   "label": "salary",
+   "only_roles": [
+    "hr-manager",
+    "payroll-officer"
+   ]
+  },
+  {
+   "label": "hr-confidential",
+   "only_roles": [
+    "hr-partner",
+    "hr-manager"
+   ]
+  },
+  {
+   "label": "secret",
+   "only_roles": [
+    "treasury",
+    "hr-partner",
+    "hr-manager",
+    "sales-manager"
+   ]
+  },
+  {
+   "label": "secret",
+   "max_depth": 1
+  },
+  {
+   "label": "internal",
+   "max_depth": 1
+  },
+  {
+   "label": "pricing",
+   "max_depth": 1
+  }
+ ],
+ "field_views": [
+  {
+   "agent_group": "it-agents",
+   "resource": "hr.employee",
+   "read": [
+    "id",
+    "name",
+    "email",
+    "unit",
+    "region",
+    "manager",
+    "job_title",
+    "start_date",
+    "status"
+   ]
+  },
+  {
+   "agent_group": "finance-agents",
+   "resource": "hr.employee",
+   "read": [
+    "id",
+    "name",
+    "unit",
+    "region",
+    "status",
+    "start_date",
+    "job_title",
+    "bank_account"
+   ]
+  },
+  {
+   "agent_group": "it-agents",
+   "resource": "crm.customer",
+   "read": [
+    "id",
+    "name",
+    "email",
+    "phone",
+    "region",
+    "tier"
+   ]
+  },
+  {
+   "agent_group": "sales-agents",
+   "resource": "crm.customer",
+   "read_without_labels": [
+    "internal",
+    "financial"
+   ]
+  },
+  {
+   "agent_group": "support-agents",
+   "resource": "crm.customer",
+   "write": [
+    "email",
+    "phone",
+    "addresses"
+   ]
+  },
+  {
+   "agent_group": "support-agents",
+   "resource": "billing.refund",
+   "write_except": [
+    "status"
+   ]
+  },
+  {
+   "agent_group": "finance-agents",
+   "resource": "billing.invoice",
+   "write": [
+    "status",
+    "po_id"
+   ]
+  },
+  {
+   "agent_group": "finance-agents",
+   "resource": "billing.refund",
+   "write": [
+    "status"
+   ]
+  },
+  {
+   "agent_group": "finance-agents",
+   "resource": "procurement.vendor",
+   "write": [
+    "bank.iban",
+    "bank.bic"
+   ]
+  },
+  {
+   "agent_group": "sales-agents",
+   "resource": "sales.contract",
+   "write": [
+    "status",
+    "term_months",
+    "clauses"
+   ]
+  },
+  {
+   "agent_group": "procurement-agents",
+   "resource": "procurement.po",
+   "write_except": [
+    "approved_by"
+   ]
+  },
+  {
+   "agent_group": "procurement-agents",
+   "resource": "procurement.vendor",
+   "write": [
+    "id",
+    "name",
+    "region",
+    "status",
+    "contact_email",
+    "onboarded_by"
+   ]
+  }
+ ],
+ "access": [
+  {
+   "roles": [
+    "support-agent",
+    "support-supervisor"
+   ],
+   "agent_group": "support-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "crm.customer",
+    "crm.ticket",
+    "billing.refund"
+   ]
+  },
+  {
+   "roles": [
+    "support-agent",
+    "support-supervisor"
+   ],
+   "agents": [
+    "support-orchestrator"
+   ],
+   "actions": [
+    "update"
+   ],
+   "resources": [
+    "crm.customer"
+   ]
+  },
+  {
+   "roles": [
+    "support-agent",
+    "support-supervisor"
+   ],
+   "agent_group": "support-agents",
+   "actions": [
+    "create",
+    "update"
+   ],
+   "resources": [
+    "crm.ticket"
+   ]
+  },
+  {
+   "roles": [
+    "support-agent",
+    "support-supervisor"
+   ],
+   "agent_group": "support-agents",
+   "actions": [
+    "create"
+   ],
+   "resources": [
+    "billing.refund"
+   ]
+  },
+  {
+   "roles": [
+    "ap-clerk",
+    "ap-manager"
+   ],
+   "agent_group": "finance-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "billing.invoice",
+    "billing.refund",
+    "finance.payment",
+    "procurement.po",
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "ap-clerk",
+    "ap-manager"
+   ],
+   "agent_group": "finance-agents",
+   "actions": [
+    "update"
+   ],
+   "resources": [
+    "billing.invoice"
+   ]
+  },
+  {
+   "roles": [
+    "ap-clerk",
+    "ap-manager"
+   ],
+   "agents": [
+    "finance-orchestrator"
+   ],
+   "actions": [
+    "update"
+   ],
+   "resources": [
+    "billing.refund"
+   ]
+  },
+  {
+   "roles": [
+    "ap-clerk",
+    "ap-manager"
+   ],
+   "agents": [
+    "finance-orchestrator",
+    "payment-poster"
+   ],
+   "actions": [
+    "create"
+   ],
+   "resources": [
+    "finance.payment"
+   ]
+  },
+  {
+   "roles": [
+    "treasury"
+   ],
+   "agent_group": "finance-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "billing.invoice",
+    "finance.payment",
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "treasury"
+   ],
+   "agents": [
+    "finance-orchestrator"
+   ],
+   "actions": [
+    "update"
+   ],
+   "resources": [
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "payroll-officer"
+   ],
+   "agent_group": "finance-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "hr.employee",
+    "hr.salary"
+   ]
+  },
+  {
+   "roles": [
+    "payroll-officer"
+   ],
+   "agents": [
+    "finance-orchestrator"
+   ],
+   "actions": [
+    "create"
+   ],
+   "resources": [
+    "finance.payment"
+   ]
+  },
+  {
+   "roles": [
+    "controller"
+   ],
+   "agent_group": "finance-agents",
+   "actions": [
+    "read",
+    "create"
+   ],
+   "resources": [
+    "finance.ledger"
+   ]
+  },
+  {
+   "roles": [
+    "controller"
+   ],
+   "agents": [
+    "finance-orchestrator"
+   ],
+   "actions": [
+    "approve",
+    "close"
+   ],
+   "resources": [
+    "finance.ledger"
+   ]
+  },
+  {
+   "roles": [
+    "hr-partner",
+    "hr-manager"
+   ],
+   "agent_group": "hr-agents",
+   "actions": [
+    "read",
+    "create",
+    "update"
+   ],
+   "resources": [
+    "hr.employee",
+    "hr.review"
+   ]
+  },
+  {
+   "roles": [
+    "hr-partner",
+    "hr-manager"
+   ],
+   "agent_group": "hr-agents",
+   "actions": [
+    "read",
+    "create"
+   ],
+   "resources": [
+    "it.access_request"
+   ]
+  },
+  {
+   "roles": [
+    "hr-manager"
+   ],
+   "agent_group": "hr-agents",
+   "actions": [
+    "read",
+    "create",
+    "update"
+   ],
+   "resources": [
+    "hr.salary"
+   ]
+  },
+  {
+   "roles": [
+    "sales-rep",
+    "sales-manager"
+   ],
+   "agent_group": "sales-agents",
+   "actions": [
+    "read",
+    "create",
+    "update"
+   ],
+   "resources": [
+    "sales.opportunity"
+   ]
+  },
+  {
+   "roles": [
+    "sales-rep",
+    "sales-manager"
+   ],
+   "agent_group": "sales-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "sales.contract",
+    "crm.customer"
+   ]
+  },
+  {
+   "roles": [
+    "sales-rep",
+    "sales-manager"
+   ],
+   "agents": [
+    "sales-orchestrator"
+   ],
+   "actions": [
+    "update"
+   ],
+   "resources": [
+    "sales.contract"
+   ]
+  },
+  {
+   "roles": [
+    "sales-manager"
+   ],
+   "agents": [
+    "sales-orchestrator"
+   ],
+   "actions": [
+    "approve"
+   ],
+   "resources": [
+    "sales.opportunity"
+   ]
+  },
+  {
+   "roles": [
+    "buyer"
+   ],
+   "agent_group": "procurement-agents",
+   "actions": [
+    "read",
+    "create",
+    "update"
+   ],
+   "resources": [
+    "procurement.po",
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "requisitioner"
+   ],
+   "agents": [
+    "procurement-orchestrator"
+   ],
+   "actions": [
+    "read",
+    "create"
+   ],
+   "resources": [
+    "procurement.po"
+   ]
+  },
+  {
+   "roles": [
+    "po-approver"
+   ],
+   "agent_group": "procurement-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "procurement.po",
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "po-approver"
+   ],
+   "agents": [
+    "procurement-orchestrator"
+   ],
+   "actions": [
+    "approve"
+   ],
+   "resources": [
+    "procurement.po",
+    "procurement.vendor"
+   ]
+  },
+  {
+   "roles": [
+    "it-operator"
+   ],
+   "agent_group": "it-agents",
+   "actions": [
+    "read",
+    "create",
+    "update",
+    "disable",
+    "reset_password"
+   ],
+   "resources": [
+    "it.account"
+   ]
+  },
+  {
+   "roles": [
+    "it-operator"
+   ],
+   "agent_group": "it-agents",
+   "actions": [
+    "read",
+    "create",
+    "update"
+   ],
+   "resources": [
+    "it.access_request"
+   ]
+  },
+  {
+   "roles": [
+    "it-operator"
+   ],
+   "agents": [
+    "it-orchestrator"
+   ],
+   "actions": [
+    "grant"
+   ],
+   "resources": [
+    "it.access_request"
+   ]
+  },
+  {
+   "roles": [
+    "it-operator"
+   ],
+   "agent_group": "it-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "hr.employee"
+   ]
+  },
+  {
+   "roles": [
+    "access-approver"
+   ],
+   "agents": [
+    "it-orchestrator"
+   ],
+   "actions": [
+    "read",
+    "approve"
+   ],
+   "resources": [
+    "it.access_request"
+   ]
+  },
+  {
+   "roles": [
+    "break-glass"
+   ],
+   "agents": [
+    "incident-responder"
+   ],
+   "actions": [
+    "read",
+    "update",
+    "disable"
+   ],
+   "resources": [
+    "it.account"
+   ]
+  },
+  {
+   "roles": [
+    "break-glass"
+   ],
+   "agents": [
+    "incident-responder"
+   ],
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "crm.customer"
+   ]
+  },
+  {
+   "roles": [
+    "auditor"
+   ],
+   "agent_group": "compliance-agents",
+   "actions": [
+    "read"
+   ],
+   "resources": [
+    "*"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,175 @@
+{
+  "tool": "SmartDelegate",
+  "package": "smartdelegate",
+  "version": "0.3.0",
+  "iaiso_section": "§10 · Delegation",
+  "rule_prefix": "DELEGATE-*",
+  "conforms_to": "https://github.com/SmartTasksOrg/IAIso",
+  "cloud": "https://smarttasks.cloud",
+  "stacks_with": [
+    "SmartRoute",
+    "SmartSeal",
+    "SmartPangolin"
+  ],
+  "controls": {
+    "held": "A human can lend an agent only a role they hold (DELEGATE-ROLE-NOT-HELD).",
+    "ceiling": "A token never carries more than the role allows (DELEGATE-ROLE-EXCEEDED); a sub-agent token never more than its parent (DELEGATE-WIDENING).",
+    "policy": "Every call is decided by policy, default deny (DELEGATE-NO-MATCHING-PERMIT, DELEGATE-POLICY-FORBID).",
+    "data": "Fields the principal may not see are removed before content reaches the model (DELEGATE-FIELD-DENIED in strict mode).",
+    "spend": "Budgets are cumulative across the delegation tree (DELEGATE-BUDGET-EXCEEDED).",
+    "approval": "Marked actions wait for a second human (DELEGATE-APPROVAL-REQUIRED).",
+    "offboarding": "Revoking a user ends every token issued for them (DELEGATE-TOKEN-REVOKED).",
+    "audit": "Every decision is appended to a hash-chained log."
+  },
+  "starter_kits": {
+    "Python": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/python",
+    "Node / TypeScript": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/node",
+    "Go": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/go",
+    "Java": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/java",
+    "PHP": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/php",
+    "Rust": "https://github.com/SmartTasksOrg/IAIso/tree/main/starter-kits/rust"
+  },
+  "framework": {
+    "about": "How SmartDelegate fits a larger governance framework. docs/FRAMEWORK.md is the text; this is the same content as data. No code in this repository calls SmartFabric, the IAIso engine or another Smart* tool.",
+    "kind": "authority-bounding control with evidence",
+    "not": [
+      "containment of a hostile process",
+      "content filter",
+      "behavioural or pressure monitoring"
+    ],
+    "section_label": {
+      "value": "§10 · Delegation",
+      "assigned_by_the_standard": false,
+      "note": "A working label chosen by the authors of this repository."
+    },
+    "iaiso_described_from": "SmartFabric repository: README.md, docs/00_OVERVIEW.md, docs/04_MAPPING.md, docs/07_IAISO_CORE_BINDING.md, docs/09_TRANSPORT_AND_OPERATIONS.md, schema/example.fingerprint.json. The IAIso standard's own repository was not consulted.",
+    "status_values": [
+      "implemented in this repo",
+      "interface exists",
+      "proposed, not built"
+    ],
+    "principles": {
+      "least authority per task": {
+        "where": [
+          "spec/ROLES.md",
+          "roles.json: cap, max_ttl, tasks, agents",
+          "issue_token"
+        ],
+        "limit": "docs/THREAT_MODEL.md threats 22, 23"
+      },
+      "authority only narrows across delegation": {
+        "where": [
+          "exchange_token",
+          "spec/API.md: Tokens",
+          "spec/conformance/vectors/02_delegation.json"
+        ],
+        "limit": "docs/THREAT_MODEL.md threat 1; docs/LIMITATIONS.md section 5"
+      },
+      "default deny": {
+        "where": [
+          "policy evaluation",
+          "field mask",
+          "unmapped tools and routes"
+        ],
+        "limit": "docs/LIMITATIONS.md section 9"
+      },
+      "fail closed": {
+        "where": [
+          "engine errors are refusals",
+          "audit write failure refuses",
+          "failed reload keeps the old bundle"
+        ],
+        "limit": "docs/THREAT_MODEL.md threats 16, 21a"
+      },
+      "separation of duties": {
+        "where": [
+          "admin key and pep key",
+          "verify_only engines",
+          "self-approval refused",
+          "bundle signing key"
+        ],
+        "limit": "docs/THREAT_MODEL.md threats 17, 19, 35"
+      },
+      "human approval for marked actions": {
+        "where": [
+          "@require_approval",
+          "approvals, approve",
+          "interfaces/docs/ApprovalChannel.md"
+        ],
+        "limit": "docs/THREAT_MODEL.md threat 17"
+      },
+      "revocation follows the human": {
+        "where": [
+          "revoke {user}",
+          "bridge sync-* --revoke",
+          "spec/conformance/vectors/10_offboarding.json"
+        ],
+        "limit": "docs/LIMITATIONS.md section 5; docs/THREAT_MODEL.md threat 36"
+      },
+      "tamper-evident evidence": {
+        "where": [
+          "audit.jsonl hash chain",
+          "spec/PORTING.md: Audit record",
+          "interfaces/docs/AuditSink.md"
+        ],
+        "limit": "docs/LIMITATIONS.md section 12; docs/THREAT_MODEL.md threats 14, 25"
+      },
+      "enforcement outside the agent process": {
+        "where": [
+          "smartdelegate http-proxy",
+          "smartdelegate mcp-proxy"
+        ],
+        "limit": "docs/LIMITATIONS.md sections 1, 11; docs/THREAT_MODEL.md threat 9"
+      }
+    },
+    "integration_status": {
+      "consent-bounded expansion, default deny (invariant 4)": {
+        "status": "implemented in this repo",
+        "note": "As SmartDelegate's own control. It does not issue or check a ConsentScope."
+      },
+      "ConsentScope tokens (Layer 5)": {
+        "status": "proposed, not built",
+        "note": "The capability token is the nearest object. The ConsentScope format was not available; no compatibility is claimed."
+      },
+      "escalation with multi-party authorization (Layer 4)": {
+        "status": "interface exists",
+        "extension_point": "interfaces: ApprovalChannel, pump",
+        "note": "An adapter to a fabric escalation broker is not written."
+      },
+      "global halt (Layer 6)": {
+        "status": "proposed, not built",
+        "hook": "H1",
+        "extension_point": "state.json flag checked first; RevocationFeed to carry it; today: a forbid-all bundle and reload"
+      },
+      "pressure and zones": {
+        "status": "proposed, not built",
+        "hook": "H2, H3",
+        "extension_point": "issue_token ttl and cap.budget at the token service; audit records as inputs"
+      },
+      "provenance on the observability plane": {
+        "status": "interface exists",
+        "hook": "H3",
+        "extension_point": "interfaces: AuditSink, ship",
+        "note": "An exporter to fabric events is not written."
+      },
+      "node fingerprint": {
+        "status": "proposed, not built",
+        "hook": "H4",
+        "extension_point": "info"
+      },
+      "planning-depth and tool-expansion limits (Layer 2)": {
+        "status": "implemented in this repo",
+        "note": "Related, not the same quantity: max_depth here is the length of the delegation chain."
+      },
+      "pressure computed outside the model (invariant 5)": {
+        "status": "implemented in this repo",
+        "note": "Same principle, different mechanism: decisions outside the agent's process when a proxy is the boundary."
+      },
+      "trust gating (SmartRoute)": {
+        "status": "proposed, not built",
+        "hook": "H5",
+        "extension_point": "inspect_token"
+      }
+    }
+  }
+}

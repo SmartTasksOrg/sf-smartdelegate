@@ -1,0 +1,208 @@
+{
+ "id": "08_role_change",
+ "name": "Role change",
+ "description": "A sales manager moves back to an account-executive job. The directory sync revokes their tokens; the old token dies, a new token under the old role is refused once the live membership is sent, and a token under the new role works with less.",
+ "units": [
+  "sales",
+  "it-ops"
+ ],
+ "cast": {
+  "mover": {
+   "group": "sales-managers"
+  },
+  "owner": {
+   "group": "sales",
+   "not_group": "sales-managers",
+   "region_of": "mover"
+  },
+  "admin": {
+   "group": "it-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "mover",
+   "op": "delegate",
+   "agent": "sales-orchestrator",
+   "role": "sales-manager",
+   "task": "deal-{n}",
+   "save": "as_manager",
+   "expect": "ok",
+   "why": "A sales manager lends the sales orchestrator the sales-manager role."
+  },
+  {
+   "id": "s2",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_manager",
+   "action": "approve",
+   "resource": "sales.opportunity/o-{n}",
+   "attrs": {
+    "region": "{mover.region}",
+    "owner": "{owner}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager's agent approves a discount on a deal the manager does not own."
+  },
+  {
+   "id": "s3",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_manager",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{mover.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "region": "{mover.region}",
+    "status": "draft",
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "pricing.margin_pct"
+    ]
+   },
+   "why": "A sales manager sees the margin."
+  },
+  {
+   "id": "s4",
+   "actor": "admin",
+   "op": "revoke_user",
+   "user": "mover",
+   "expect": "ok",
+   "why": "The directory sync finds that the mover left the sales-managers group and revokes every token issued for them so far."
+  },
+  {
+   "id": "s5",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_manager",
+   "action": "approve",
+   "resource": "sales.opportunity/o-{n}-2",
+   "attrs": {
+    "region": "{mover.region}",
+    "owner": "{owner}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_revoked",
+   "why": "The old token is dead."
+  },
+  {
+   "id": "s6",
+   "actor": "clock",
+   "op": "advance",
+   "seconds": 2,
+   "why": "Two seconds pass."
+  },
+  {
+   "id": "s7",
+   "actor": "mover",
+   "op": "delegate",
+   "agent": "sales-orchestrator",
+   "role": "sales-manager",
+   "task": "deal-{n}",
+   "save": null,
+   "groups": [
+    "sales"
+   ],
+   "expect": "error:role_not_held",
+   "why": "With the membership the identity provider now reports, the old role is no longer held."
+  },
+  {
+   "id": "s8",
+   "actor": "mover",
+   "op": "delegate",
+   "agent": "sales-orchestrator",
+   "role": "sales-rep",
+   "task": "deal-{n}",
+   "save": "as_rep",
+   "groups": [
+    "sales"
+   ],
+   "expect": "ok",
+   "why": "Under the role still held, a new token is issued."
+  },
+  {
+   "id": "s9",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_rep",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{mover.region}"
+   },
+   "context": null,
+   "data": {
+    "id": "k-{n}",
+    "region": "{mover.region}",
+    "status": "draft",
+    "pricing": {
+     "list_price": 12000000,
+     "discount_pct": 15,
+     "margin_pct": 38
+    }
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "pricing.margin_pct"
+    ],
+    "visible": [
+     "pricing.list_price"
+    ]
+   },
+   "why": "The same person's agent now reads the contract without the margin."
+  },
+  {
+   "id": "s10",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_rep",
+   "action": "approve",
+   "resource": "sales.opportunity/o-{n}-2",
+   "attrs": {
+    "region": "{mover.region}",
+    "owner": "{owner}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "And can no longer approve discounts: the sales-rep role carries no approve."
+  },
+  {
+   "id": "s11",
+   "actor": "sales-orchestrator",
+   "op": "call",
+   "token": "as_manager",
+   "action": "read",
+   "resource": "sales.contract/k-{n}",
+   "attrs": {
+    "region": "{mover.region}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:token_revoked",
+   "why": "The old token stays dead."
+  }
+ ]
+}

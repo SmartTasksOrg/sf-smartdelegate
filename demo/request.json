@@ -1,0 +1,13 @@
+{
+  "action": "read",
+  "resource": {"path": "crm.customer", "id": "c-1"},
+  "data": {
+    "id": "c-1",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "ssn": "123-45-6789",
+    "region": "EU",
+    "notes": "VIP, do not upsell",
+    "card": {"last4": "4242", "number": "4000 0000 0000 4242"}
+  }
+}

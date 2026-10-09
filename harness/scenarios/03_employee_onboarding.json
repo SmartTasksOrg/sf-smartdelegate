@@ -1,0 +1,558 @@
+{
+ "id": "03_employee_onboarding",
+ "name": "Employee onboarding",
+ "description": "HR creates the employee record and raises the access request, a manager approves the access, IT provisions the account, an HR manager sets the salary and payroll picks it up. Each unit's agents see only their fields: IT never sees salary, national id or home address; finance never sees review notes or the emergency contact; an HR partner never sees salary figures.",
+ "units": [
+  "hr",
+  "it-ops",
+  "finance",
+  "sales"
+ ],
+ "cast": {
+  "hr": {
+   "group": "hr",
+   "not_group": "hr-managers"
+  },
+  "hr_manager": {
+   "group": "hr-managers"
+  },
+  "hiring_manager": {
+   "group": "sales-managers"
+  },
+  "it": {
+   "group": "it-ops",
+   "not_group": "it-managers"
+  },
+  "payroll": {
+   "group": "payroll"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "hr",
+   "op": "delegate",
+   "agent": "hr-orchestrator",
+   "role": "hr-partner",
+   "task": "onboard-{n}",
+   "save": "hr_task",
+   "expect": "ok",
+   "why": "An HR partner lends the HR orchestrator the hr-partner role for this onboarding."
+  },
+  {
+   "id": "s2",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "hr_task",
+   "action": "create",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "name": "Nora Quist",
+    "email": "nora.quist@kestrel.example",
+    "unit": "sales",
+    "region": "EU",
+    "manager": "{hiring_manager}",
+    "job_title": "Account executive",
+    "start_date": "2026-11-02",
+    "status": "pending",
+    "national_id": "AB123456C",
+    "home_address": "1 Harbour Road",
+    "emergency_contact": "partner, +49 30 0000"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "HR creates the employee record, national id and emergency contact included."
+  },
+  {
+   "id": "s3",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "hr_task",
+   "action": "create",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "bank_account": "DE02120300000000202051"
+   },
+   "strict": true,
+   "expect": "deny:field_denied",
+   "why": "Nobody but treasury writes or sees a bank account number."
+  },
+  {
+   "id": "s4",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "hr_task",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "An HR partner's role does not cover salaries."
+  },
+  {
+   "id": "s5",
+   "actor": "hr-orchestrator",
+   "op": "narrow",
+   "token": "hr_task",
+   "to": "onboarding-coordinator",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "hr.employee/emp-{n}",
+     "it.access_request/*"
+    ]
+   },
+   "save": "coordination",
+   "expect": "ok",
+   "why": "The orchestrator hands coordination to the onboarding coordinator: this employee, and access requests."
+  },
+  {
+   "id": "s6",
+   "actor": "onboarding-coordinator",
+   "op": "call",
+   "token": "coordination",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "name": "Nora Quist",
+    "email": "nora.quist@kestrel.example",
+    "unit": "sales",
+    "region": "EU",
+    "manager": "{hiring_manager}",
+    "job_title": "Account executive",
+    "start_date": "2026-11-02",
+    "status": "pending",
+    "national_id": "AB123456C",
+    "home_address": "1 Harbour Road",
+    "emergency_contact": "partner, +49 30 0000",
+    "bank_account": "DE02120300000000202051"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "national_id"
+    ],
+    "visible": [
+     "name",
+     "emergency_contact",
+     "home_address"
+    ]
+   },
+   "why": "The coordinator is a sub-agent: the national id (a secret) stops at the orchestrator."
+  },
+  {
+   "id": "s7",
+   "actor": "onboarding-coordinator",
+   "op": "call",
+   "token": "coordination",
+   "action": "create",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "ar-{n}",
+    "employee_id": "emp-{n}",
+    "system": "crm",
+    "level": "standard",
+    "requested_by": "{hr}",
+    "justification": "new hire",
+    "status": "requested"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The coordinator raises the access request for the new hire."
+  },
+  {
+   "id": "s8",
+   "actor": "hr-orchestrator",
+   "op": "handoff",
+   "to": "it-orchestrator",
+   "item": {
+    "work": "provision accounts",
+    "employee": "emp-{n}",
+    "access_request": "ar-{n}"
+   },
+   "tokens": null,
+   "why": "HR hands the provisioning to IT as a work item."
+  },
+  {
+   "id": "s9",
+   "actor": "hr-orchestrator",
+   "op": "handoff",
+   "to": "finance-orchestrator",
+   "item": {
+    "work": "set up payroll",
+    "employee": "emp-{n}"
+   },
+   "tokens": null,
+   "why": "HR hands the payroll setup to finance as a work item."
+  },
+  {
+   "id": "s10",
+   "actor": "hiring_manager",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "access-approver",
+   "task": "access-{n}",
+   "save": "manager_approval",
+   "expect": "ok",
+   "why": "The hiring manager lends the IT orchestrator the access-approver role."
+  },
+  {
+   "id": "s11",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "manager_approval",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{hr}",
+    "employee_id": "emp-{n}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager did not raise the request and it is not for the manager."
+  },
+  {
+   "id": "s12",
+   "actor": "it",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "it-operator",
+   "task": "onboard-{n}",
+   "save": "it_task",
+   "expect": "ok",
+   "why": "A system administrator lends the IT orchestrator the it-operator role."
+  },
+  {
+   "id": "s13",
+   "actor": "it-orchestrator",
+   "op": "narrow",
+   "token": "it_task",
+   "to": "onboarding-provisioner",
+   "cap": {
+    "actions": [
+     "read",
+     "create"
+    ],
+    "resources": [
+     "hr.employee/emp-{n}",
+     "it.account/*"
+    ]
+   },
+   "save": "provisioning",
+   "expect": "ok",
+   "why": "The orchestrator hands the account creation to the provisioner."
+  },
+  {
+   "id": "s14",
+   "actor": "onboarding-provisioner",
+   "op": "call",
+   "token": "provisioning",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "name": "Nora Quist",
+    "email": "nora.quist@kestrel.example",
+    "unit": "sales",
+    "region": "EU",
+    "manager": "{hiring_manager}",
+    "job_title": "Account executive",
+    "start_date": "2026-11-02",
+    "status": "pending",
+    "national_id": "AB123456C",
+    "home_address": "1 Harbour Road",
+    "emergency_contact": "partner, +49 30 0000",
+    "bank_account": "DE02120300000000202051"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "national_id",
+     "home_address",
+     "bank_account",
+     "emergency_contact"
+    ],
+    "visible": [
+     "name",
+     "email",
+     "job_title",
+     "manager"
+    ]
+   },
+   "why": "IT sees the basic employee fields and nothing else."
+  },
+  {
+   "id": "s15",
+   "actor": "onboarding-provisioner",
+   "op": "call",
+   "token": "provisioning",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "IT never sees salary: the provisioner's token does not cover it."
+  },
+  {
+   "id": "s16",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "it_task",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Nor does the it-operator role itself."
+  },
+  {
+   "id": "s17",
+   "actor": "onboarding-provisioner",
+   "op": "call",
+   "token": "provisioning",
+   "action": "create",
+   "resource": "it.account/acc-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "acc-{n}",
+    "employee_id": "emp-{n}",
+    "username": "nora.quist",
+    "status": "active",
+    "groups": [
+     "sales"
+    ]
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The provisioner creates the account."
+  },
+  {
+   "id": "s18",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "it_task",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{hr}",
+    "employee_id": "emp-{n}",
+    "approved_by": "{hiring_manager}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Standard access, approved by the manager, is granted."
+  },
+  {
+   "id": "s19",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "it_task",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}-b",
+   "attrs": {
+    "requested_by": "{hr}",
+    "employee_id": "emp-{n}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "Access nobody approved is not granted."
+  },
+  {
+   "id": "s20",
+   "actor": "hr_manager",
+   "op": "delegate",
+   "agent": "hr-orchestrator",
+   "role": "hr-manager",
+   "task": "salary-{n}",
+   "save": "salary_task",
+   "expect": "ok",
+   "why": "An HR manager lends the HR orchestrator the hr-manager role to set the salary."
+  },
+  {
+   "id": "s21",
+   "actor": "hr-orchestrator",
+   "op": "call",
+   "token": "salary_task",
+   "action": "create",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "employee_id": "emp-{n}",
+    "currency": "EUR",
+    "grade": "L3",
+    "base": 5200000,
+    "bonus": 400000,
+    "notes": "counter-offer matched"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The HR manager's agent records the salary."
+  },
+  {
+   "id": "s22",
+   "actor": "payroll",
+   "op": "delegate",
+   "agent": "finance-orchestrator",
+   "role": "payroll-officer",
+   "task": "onboard-{n}",
+   "save": "payroll_task",
+   "expect": "ok",
+   "why": "A payroll officer lends the finance orchestrator the payroll-officer role."
+  },
+  {
+   "id": "s23",
+   "actor": "finance-orchestrator",
+   "op": "narrow",
+   "token": "payroll_task",
+   "to": "payroll-calculator",
+   "cap": {
+    "actions": [
+     "read"
+    ],
+    "resources": [
+     "hr.employee/emp-{n}",
+     "hr.salary/emp-{n}"
+    ]
+   },
+   "save": "calculation",
+   "expect": "ok",
+   "why": "The orchestrator hands the calculation to the payroll calculator: read this employee and this salary."
+  },
+  {
+   "id": "s24",
+   "actor": "payroll-calculator",
+   "op": "call",
+   "token": "calculation",
+   "action": "read",
+   "resource": "hr.salary/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "employee_id": "emp-{n}",
+    "currency": "EUR",
+    "grade": "L3",
+    "base": 5200000,
+    "bonus": 400000,
+    "notes": "counter-offer matched"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "notes"
+    ],
+    "visible": [
+     "base",
+     "bonus",
+     "grade"
+    ]
+   },
+   "why": "Payroll sees the salary figures, not HR's confidential note."
+  },
+  {
+   "id": "s25",
+   "actor": "payroll-calculator",
+   "op": "call",
+   "token": "calculation",
+   "action": "read",
+   "resource": "hr.employee/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "emp-{n}",
+    "name": "Nora Quist",
+    "email": "nora.quist@kestrel.example",
+    "unit": "sales",
+    "region": "EU",
+    "manager": "{hiring_manager}",
+    "job_title": "Account executive",
+    "start_date": "2026-11-02",
+    "status": "pending",
+    "national_id": "AB123456C",
+    "home_address": "1 Harbour Road",
+    "emergency_contact": "partner, +49 30 0000",
+    "bank_account": "DE02120300000000202051"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "hidden": [
+     "national_id",
+     "home_address",
+     "bank_account",
+     "emergency_contact",
+     "email",
+     "manager"
+    ],
+    "visible": [
+     "name",
+     "job_title",
+     "start_date"
+    ]
+   },
+   "why": "Payroll sees who the employee is; no national id, address, emergency contact or account number."
+  },
+  {
+   "id": "s26",
+   "actor": "payroll-calculator",
+   "op": "call",
+   "token": "calculation",
+   "action": "read",
+   "resource": "hr.review/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Finance never sees review notes: the calculator's token does not cover reviews."
+  },
+  {
+   "id": "s27",
+   "actor": "finance-orchestrator",
+   "op": "call",
+   "token": "payroll_task",
+   "action": "read",
+   "resource": "hr.review/emp-{n}",
+   "attrs": null,
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_resource",
+   "why": "Nor does the payroll-officer role itself."
+  }
+ ]
+}

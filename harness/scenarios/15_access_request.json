@@ -1,0 +1,292 @@
+{
+ "id": "15_access_request",
+ "name": "Access request with manager approval",
+ "description": "An IT operator raises an access request for an employee, the employee's manager approves it through the IT orchestrator, and IT grants it. Nobody approves a request they raised or that is for themselves, and nobody grants their own access.",
+ "units": [
+  "it-ops",
+  "sales"
+ ],
+ "cast": {
+  "operator": {
+   "group": "it-ops",
+   "not_group": "it-managers"
+  },
+  "employee": {
+   "group": "sales",
+   "not_group": "sales-managers"
+  },
+  "manager": {
+   "group": "sales-managers"
+  }
+ },
+ "steps": [
+  {
+   "id": "s1",
+   "actor": "operator",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "it-operator",
+   "task": "access-{n}",
+   "save": "ops",
+   "expect": "ok",
+   "why": "A system administrator lends the IT orchestrator the it-operator role."
+  },
+  {
+   "id": "s2",
+   "actor": "it-orchestrator",
+   "op": "narrow",
+   "token": "ops",
+   "to": "access-reviewer",
+   "cap": {
+    "actions": [
+     "read",
+     "create",
+     "update"
+    ],
+    "resources": [
+     "it.access_request/*"
+    ]
+   },
+   "save": "review",
+   "expect": "ok",
+   "why": "The orchestrator hands the paperwork to the access reviewer."
+  },
+  {
+   "id": "s3",
+   "actor": "access-reviewer",
+   "op": "call",
+   "token": "review",
+   "action": "create",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": null,
+   "context": null,
+   "data": {
+    "id": "ar-{n}",
+    "employee_id": "{employee}",
+    "system": "crm",
+    "level": "standard",
+    "requested_by": "{operator}",
+    "justification": "territory change",
+    "status": "requested"
+   },
+   "strict": true,
+   "expect": "allow",
+   "why": "The reviewer records the request."
+  },
+  {
+   "id": "s4",
+   "actor": "access-reviewer",
+   "op": "call",
+   "token": "review",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}",
+    "approved_by": "{manager}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The reviewer's token carries no grant."
+  },
+  {
+   "id": "s5",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:no_matching_permit",
+   "why": "Not approved yet: nothing is granted."
+  },
+  {
+   "id": "s6",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "The operator's role carries no approve."
+  },
+  {
+   "id": "s7",
+   "actor": "employee",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "access-approver",
+   "task": "access-{n}",
+   "save": null,
+   "expect": "error:role_not_held",
+   "why": "The employee is not a manager and does not hold the access-approver role."
+  },
+  {
+   "id": "s8",
+   "actor": "manager",
+   "op": "delegate",
+   "agent": "it-orchestrator",
+   "role": "access-approver",
+   "task": "access-{n}",
+   "save": "approval",
+   "expect": "ok",
+   "why": "The employee's manager lends the IT orchestrator the access-approver role."
+  },
+  {
+   "id": "s9",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "approval",
+   "action": "read",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}"
+   },
+   "context": null,
+   "data": {
+    "id": "ar-{n}",
+    "employee_id": "{employee}",
+    "system": "crm",
+    "level": "standard",
+    "requested_by": "{operator}",
+    "justification": "territory change",
+    "status": "requested"
+   },
+   "strict": null,
+   "expect": {
+    "outcome": "allow",
+    "visible": [
+     "justification",
+     "level"
+    ]
+   },
+   "why": "The manager's agent reads the request."
+  },
+  {
+   "id": "s10",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "approval",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "The manager approves."
+  },
+  {
+   "id": "s11",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "approval",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}-self",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{manager}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "A request for the manager's own access is not the manager's to approve."
+  },
+  {
+   "id": "s12",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "approval",
+   "action": "approve",
+   "resource": "it.access_request/ar-{n}-mine",
+   "attrs": {
+    "requested_by": "{manager}",
+    "employee_id": "{employee}"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Nor one the manager raised."
+  },
+  {
+   "id": "s13",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "approval",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}",
+    "approved_by": "{manager}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:capability_action",
+   "why": "Approving is all this role does: no grant."
+  },
+  {
+   "id": "s14",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}",
+   "attrs": {
+    "requested_by": "{operator}",
+    "employee_id": "{employee}",
+    "approved_by": "{manager}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "allow",
+   "why": "Approved: IT grants the access."
+  },
+  {
+   "id": "s15",
+   "actor": "it-orchestrator",
+   "op": "call",
+   "token": "ops",
+   "action": "grant",
+   "resource": "it.access_request/ar-{n}-own",
+   "attrs": {
+    "requested_by": "{employee}",
+    "employee_id": "{operator}",
+    "approved_by": "{manager}",
+    "level": "standard"
+   },
+   "context": null,
+   "data": null,
+   "strict": null,
+   "expect": "deny:policy_forbid",
+   "why": "Nobody grants their own access."
+  }
+ ]
+}

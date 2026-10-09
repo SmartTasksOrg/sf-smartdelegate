@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.smarttasksorg/sf-smartdelegate",
+  "description": "Delegate, don't hand over the keys. An agent never holds more than the human's role for the task.",
+  "version": "0.3.0",
+  "repository": {
+    "url": "https://github.com/SmartTasksOrg/sf-smartdelegate",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "sf-smartdelegate",
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "uvx"
+    }
+  ]
+}

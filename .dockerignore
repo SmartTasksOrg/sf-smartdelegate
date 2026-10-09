@@ -1,0 +1,31 @@
+# Keeps the Docker build context small and free of local state. Used by
+# docker/Dockerfile.dev and docker/Dockerfile.daemon (context: repository root).
+.git
+.github
+.venv
+build
+dist
+**/__pycache__
+**/*.pyc
+**/*.egg-info
+.pytest_cache
+**/node_modules
+**/vendor
+ports/rust/target
+ports/java/build
+ports/go/smartdelegate-go
+ports/go/smartdelegate-go.exe
+harness/out
+live/out
+live/reports
+# never send keys, state or env files into an image
+.env
+docker/.env
+**/secrets.env
+**/.secret
+**/state
+**/*.key
+**/*.pem
+**/*.pk8.b64
+**/signing_key.*
+**/audit.jsonl

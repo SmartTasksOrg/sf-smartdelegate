@@ -1,0 +1,104 @@
+{
+ "suite": "12_oidc_nested_claim",
+ "about": "idp.groups_claim may be a dotted path into the ID token (Keycloak writes realm roles to realm_access.roles). A top-level claim with that exact name wins. Regenerate with spec/tools/make_oidc_fixtures.py.",
+ "config": {
+  "idp": {
+   "issuer": "https://idp.example.test",
+   "audience": "smartdelegate-demo",
+   "jwks": {
+    "keys": [
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "test-1",
+      "n": "qzeWUVC8mcJ3fR5TQZXDc1olgxByLXfTnmHs47O_e5YROHYaj1C2wKkaBvFsWnlAHLZn5XbGQ3UwkkJHEld9gFku9yd-TyW2bZVOlY-oeDT3GHgiu7zDI2RotAt4GvzFuVnS4T1xUrN25rdZOB58JIPKVXuUUFE9ASzyS7Y-R_uF_38UfPUGK9rkdrm5pDVRJAbcg1SgZFOb6_WK8pZtS3zX077Ivrxmi-fHKhZx3K6pickNqesbn6pkPyQ_5lGy6PUgSgYXfxj3R4Sg4o0ASk7PHkDgxcOLjMQgTjAC9ZwXKgDsBBVb6z-tVUwWz4VEbPzix8r5TkZ-jszUomBZew",
+      "e": "AQAB"
+     }
+    ]
+   },
+   "groups_claim": "realm_access.roles",
+   "group_map": {
+    "sg-support": "support",
+    "sg-supervisors": "supervisors"
+   }
+  }
+ },
+ "cases": [
+  {
+   "name": "group membership is read from a nested claim",
+   "steps": [
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYm9iIiwgInJlYWxtX2FjY2VzcyI6IHsicm9sZXMiOiBbInNnLXN1cGVydmlzb3JzIiwgInNnLXN1cHBvcnQiLCAib2ZmbGluZV9hY2Nlc3MiXX19.qs5s_mA6dk6dYX9fOCjRxbFVxPGdntOQr3fQFRX5uAVR-uEVxfIKDMOoM1ibcjUQFuSvVBDFFhdZ8gl5OBC6Mhb3F0gKl5ppVUbYvizZ9XPbDBdTfkhjYGrF8UrM7OWAurK83KWc-cLu_aLo_UyIkBZPOtAlFWWTok-GQqPGZMGNufsuSPrBBtBXwth_qG7-woVBDRv6jo7onWZP1kgkLFholiWot3kRCvfE72s3tAZcQES3iIieuswcBFcaQ5U797LvVOaMUKHuz-_OVyx-o4D0RP9ABzyvsFj4_iKxOg3_UunvyK8Fk7vClGcpn21F9gGhspxLme_KstUsxBXbFw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "supervisor",
+      "task": "escalation-1"
+     },
+     "expect": {
+      "ok": true,
+      "role": "supervisor"
+     },
+     "save": {
+      "t": "token"
+     }
+    },
+    {
+     "op": "inspect_token",
+     "input": {
+      "token": "$t",
+      "now": 1700000000
+     },
+     "expect": {
+      "ok": true,
+      "valid": true,
+      "claims": {
+       "grp": [
+        {
+         "type": "Group",
+         "id": "supervisors"
+        },
+        {
+         "type": "Group",
+         "id": "support"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UiLCAicmVhbG1fYWNjZXNzIjoge319.PsrgbygnI8WZCpEdjK1gdeC6l-Bi_AybLq8ZtM48ftBBezWk1fLFADGLsDafukWsEmRtP6NaH_3_Z-C2SZHQgaBrkvv-5NrqBlqTQJMoli04Ub0ArS0TvFj5FbPZtnvmR7XKJSQEU4ZZDmSzIj6j4Z4mVWSIJEb45CPy7IKd-sZBa8gEv-2Srx8sc1CfBHQlVhxzjn7v4655BpHIIcIMgD0YMD16TgY15JMSQz8EBQxLQ90awlx7yegwe1oG3-6gY33OwjG8cbnjq1a1wruGhwPwhaGfvK7zVsPBwVioNrJogIf9Cq1qj9elV40A-iORcF7XAFxhn51kX5It2zNORw",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    },
+    {
+     "op": "issue_token",
+     "input": {
+      "id_token": "eyJhbGciOiAiUlMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAidGVzdC0xIn0.eyJpc3MiOiAiaHR0cHM6Ly9pZHAuZXhhbXBsZS50ZXN0IiwgImF1ZCI6ICJzbWFydGRlbGVnYXRlLWRlbW8iLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDQxMDI0NDQ4MDAsICJzdWIiOiAiYWxpY2UifQ.iFPdVSKM4-_Do2uBF1QrkMYRd0m3_B0qyU0RVZFW9JdfYWWX0ZVfi2gLeyVIZqAtsq1yXi0rx6nSF8OxeyZogFC0x978uiizSDgdWwyw_-Z1z1TFtg_oeaJR-WXwTECC4RmY9SSCCrNY59LZ4FG_cpdJWkU-S04BxYq6khS3vuWkYWHr3jpp5nI2X2suQWrVKtawKrkdqEgvKOk_kwDYNrmyNqatO-OgwjrSVp9X_FAdbQMF2HPsU7S71Cdh11Vi9-oMpANXkO0_YjmGhcPQblTB9LUzJ3NjdK88lyF9Thk3eet-8vSWknzmKYFl8nuTj_8su8CIhOszzIV6VFEKKA",
+      "agent": "support-bot",
+      "now": 1700000000,
+      "role": "support-agent"
+     },
+     "expect": {
+      "ok": false,
+      "error": {
+       "code": "role_not_held"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

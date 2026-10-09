@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "SmartDelegate: policy check",
+      "type": "process",
+      "command": "smartdelegate",
+      "args": ["policy", "check", "--bundle", "${workspaceFolder}/bundle"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "SmartDelegate: policy test",
+      "type": "process",
+      "command": "smartdelegate",
+      "args": ["policy", "test", "--bundle", "${workspaceFolder}/bundle"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "SmartDelegate: explain the request in the open file",
+      "type": "process",
+      "command": "smartdelegate",
+      "args": ["call", "explain", "--input", "@${file}", "--config", "${workspaceFolder}/.vscode/smartdelegate.explain.json", "--bundle", "${workspaceFolder}/bundle"],
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

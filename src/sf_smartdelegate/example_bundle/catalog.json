@@ -1,0 +1,38 @@
+{
+  "resources": {
+    "crm.customer": {
+      "entity_type": "Customer",
+      "fields": {
+        "id": {},
+        "name": {"labels": ["pii"]},
+        "email": {"labels": ["pii"]},
+        "phone": {"labels": ["pii"]},
+        "ssn": {"labels": ["pii", "secret"]},
+        "region": {},
+        "tier": {},
+        "notes": {"labels": ["internal"]},
+        "addresses": {"labels": ["pii"]},
+        "addresses[].geo": {"labels": ["internal"]},
+        "card.last4": {"labels": ["financial"]},
+        "card.number": {"labels": ["financial", "secret"], "mask": "redact"}
+      }
+    },
+    "billing.refund": {
+      "entity_type": "Refund",
+      "fields": {
+        "order_id": {},
+        "amount": {"labels": ["financial"]},
+        "currency": {},
+        "reason": {},
+        "internal_note": {"labels": ["internal"]}
+      }
+    },
+    "hr.salary": {
+      "entity_type": "Salary",
+      "fields": {
+        "employee": {},
+        "amount": {"labels": ["financial", "secret"]}
+      }
+    }
+  }
+}
