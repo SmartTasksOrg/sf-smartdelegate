@@ -8,7 +8,7 @@
       "name": "sf-smartdelegate",
       "registered": true,
       "workflow": "release.yml",
-      "note": "first release (0.3.0) is published from the first commit of this repository by release.yml; README 'Install' says to use a clone until it is on PyPI"
+      "note": "first release 0.3.0 published 2026-10-09 by release.yml (PyPI trusted publishing) with provenance attestations"
     },
     {
       "registry": "pypi",

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Documentation
+- README "Install": how to check the provenance of a PyPI file; the note for the time before the first upload
+  ("if pip cannot find it yet") is gone. `names.json` records the first release.
+- Release check: the wheel installed in a clean environment now runs the README's demo command from an empty folder, not only `--version`.
+
+## 0.3.0 — first PyPI release as `sf-smartdelegate` (2026-10-09)
+
+Published to PyPI on 2026-10-09 from tag `v0.3.0` by `.github/workflows/release.yml`, with provenance attestations. The version number is the same as the 0.3.0 entry below; these are the changes made before that first upload.
+
 ### Security
 - Install instructions no longer name packages the maintainers have not
   published. Until the first release, install from a clone (README, "Install").
