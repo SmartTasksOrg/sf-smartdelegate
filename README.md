@@ -83,11 +83,17 @@ python -m pip install sf-smartdelegate
 sf-smartdelegate --demo
 ```
 
-`sf-smartdelegate` on PyPI is published only by this repository's release
-workflow (`.github/workflows/release.yml`, PyPI trusted publishing, with
-provenance attestations). Version 0.3.0 is the first release under this name.
-If pip cannot find it yet, that release has not finished: install from a clone
-instead (Python 3.10 or later):
+Every file of `sf-smartdelegate` on PyPI is built and published by this repository's
+release workflow (`.github/workflows/release.yml`, PyPI trusted publishing) and carries
+a provenance attestation that names this repository and that workflow; PyPI shows it
+under "Verified details". The same workflow records a GitHub attestation for the same
+files, which you can check with
+`gh attestation verify <file> --repo SmartTasksOrg/sf-smartdelegate`. A release file
+without that provenance is not ours.
+
+Version 0.3.0 (published 2026-10-09) is the first release under this name.
+
+To install from a clone instead (Python 3.10 or later):
 
 ```bash
 git clone https://github.com/SmartTasksOrg/sf-smartdelegate

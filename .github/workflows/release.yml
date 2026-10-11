@@ -47,11 +47,13 @@ jobs:
         run: |
           python -m pip install "build==1.6.1"
           python -m build
-      - name: Install the wheel in a clean environment and run it
+      - name: Install the wheel in a clean environment and run the README demo from an empty folder
         run: |
           python -m venv /tmp/wheel-check
-          /tmp/wheel-check/bin/python -m pip install dist/*.whl
+          /tmp/wheel-check/bin/python -m pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          cd "$(mktemp -d)"   # an empty folder: only what the wheel ships is available
           /tmp/wheel-check/bin/sf-smartdelegate --version
+          /tmp/wheel-check/bin/sf-smartdelegate --demo
       - name: SHA256SUMS
         run: |
           cd dist
